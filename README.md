@@ -1,6 +1,6 @@
 # SmartFlow — Hospital Operations Platform
 
-[![CI](https://github.com/xRirv/synesis-hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/xRirv/synesis-hackathon/actions/workflows/ci.yml)
+[![CI](https://github.com/Seshu021/synesis-hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/Seshu021/synesis-hackathon/actions/workflows/ci.yml)
 
 SmartFlow is an intelligent hospital operations and resource-optimization dashboard built for the SYNESIS 26 hackathon. It gives operations staff one place to watch bed occupancy, ED boarding, arrival forecasts, bottlenecks, discharges, billing, insurance and diagnostics — and to act on them through an approval-gated "Flow Autopilot" and a what-if simulator.
 
