@@ -11,7 +11,16 @@ import {
   Search,
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
-import { NavTabId } from '../components/Sidebar';
+import {
+  Badge,
+  Card,
+  CardHeader,
+  HeroCard,
+  PageHeader,
+  PillButton,
+  Tabs,
+} from '../components/ui';
+import { NavTabId } from '../components/navigation';
 
 interface PatientFlowViewProps {
   setActiveTab: (tab: NavTabId) => void;
@@ -35,60 +44,45 @@ export const PatientFlowView: React.FC<PatientFlowViewProps> = ({ setActiveTab }
 
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5">
-        <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-          Patient Intake & Queue Monitoring
-        </div>
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-          Patient Flow & Emergency Boarding Prevention
-        </h2>
-        <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
-          Monitor real-time patient progression from Emergency intake through clinical assessment, inpatient bed allocation,
-          and transfer. Predict and eliminate emergency boarding risks caused by downstream bed turnaround delays.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Patient Intake & Queue Monitoring"
+        title="Patient Flow"
+        description="Monitor real-time patient progression from Emergency intake through clinical assessment, inpatient bed allocation, and transfer. Predict and eliminate emergency boarding risks caused by downstream bed turnaround delays."
+        actions={
+          <>
+            <PillButton variant="dark" icon={<BedDouble className="w-3.5 h-3.5" />} onClick={() => setActiveTab('bed-management')}>
+              Allocate beds
+            </PillButton>
+            <PillButton onClick={() => setActiveTab('autopilot')}>Expedite discharge plan</PillButton>
+          </>
+        }
+      />
 
       {/* Emergency Boarding Prevention Callout Card */}
-      <div className="bg-white border border-rose-200 rounded-lg p-5 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-rose-100">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 shrink-0">
-              <ShieldAlert className="w-5 h-5" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HeroCard
+          eyebrow="Emergency boarding risk"
+          value={edBoardingItems.length}
+          unit="patients boarding"
+          caption="Admitted ED patients holding in hallway bays because target units have no ready beds."
+          status={<Badge tone="critical" className="!bg-white/10 !border-white/10 !text-white">High alert</Badge>}
+          data={queueItems.map((q) => ({ name: q.patientName.split(' ')[0], wait: q.waitingMinutes }))}
+          xKey="name"
+          yKey="wait"
+          yLabel="Wait (min)"
+          footer={
+            <div className="flex items-center justify-between">
+              <span>Wait minutes across the live queue</span>
+              <span className="text-white font-semibold tabular-nums">{queueItems.length} in queue</span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900">Emergency Boarding Risk: High Alert</h3>
-                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-sm border border-rose-200 uppercase">
-                  4 Patients Boarding
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 mt-1">
-                Patients who have completed emergency care and were authorized for inpatient admission are boarding in ED hallway bays due to 0 ready beds in target units.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setActiveTab('bed-management')}
-              className="px-3.5 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shadow-xs"
-            >
-              Allocate Compatible Beds
-            </button>
-            <button
-              onClick={() => setActiveTab('autopilot')}
-              className="px-3.5 py-2 bg-white text-slate-700 border border-slate-200 rounded-md text-xs font-medium hover:bg-slate-50 transition-colors cursor-pointer whitespace-nowrap"
-            >
-              Expedite Discharge Plan →
-            </button>
-          </div>
-        </div>
-
+          }
+        />
+      <Card>
+        <CardHeader title="Boarding patients" subtitle="Longest holds first" icon={<ShieldAlert className="w-4 h-4" />} />
         {/* Boarding Queue Strip */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {edBoardingItems.map((b) => (
-            <div key={b.id} className="p-3 bg-slate-50 border border-slate-200 rounded-md text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[...edBoardingItems].sort((x, y) => y.waitingMinutes - x.waitingMinutes).map((b) => (
+            <div key={b.id} className="p-3 bg-canvas border border-line rounded-xl text-xs">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-slate-900">{b.patientName}</span>
                 <span className="text-[10px] font-mono tabular-nums text-rose-700 font-bold bg-rose-50 px-1.5 py-0.5 rounded-sm border border-rose-200">
@@ -104,32 +98,23 @@ export const PatientFlowView: React.FC<PatientFlowViewProps> = ({ setActiveTab }
             </div>
           ))}
         </div>
+      </Card>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Interactive Filter Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-md overflow-x-auto">
-          {[
-            { id: 'all', label: 'All Patients' },
-            { id: 'admission_pending', label: 'Admission Pending' },
-            { id: 'in_assessment', label: 'In Assessment' },
-            { id: 'waiting', label: 'Waiting Triage' },
-            { id: 'allocated', label: 'Bed Allocated' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-colors cursor-pointer whitespace-nowrap ${
-                statusFilter === tab.id
-                  ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <Tabs
+          size="sm"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          items={[
+            { id: 'all', label: 'All patients' },
+            { id: 'admission_pending', label: 'Admission pending' },
+            { id: 'in_assessment', label: 'In assessment' },
+            { id: 'waiting', label: 'Waiting triage' },
+            { id: 'allocated', label: 'Bed allocated' },
+          ]}
+        />
 
         {/* Search Input */}
         <div className="relative w-full sm:w-64">
@@ -139,14 +124,14 @@ export const PatientFlowView: React.FC<PatientFlowViewProps> = ({ setActiveTab }
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search patient or symptom..."
-            className="w-full text-xs pl-9 pr-3 py-1.5 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-700 bg-white"
+            className="w-full text-xs pl-9 pr-3 py-2 border border-line rounded-full focus:outline-none focus:ring-1 focus:ring-ink bg-card"
           />
         </div>
       </div>
 
       {/* Central Queue Table */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-card border border-line rounded-2xl overflow-hidden shadow-2xs">
+        <div className="p-4 border-b border-line flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-sky-700" />
             <h3 className="text-sm font-bold text-slate-900">
@@ -160,7 +145,7 @@ export const PatientFlowView: React.FC<PatientFlowViewProps> = ({ setActiveTab }
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-line">
               <tr>
                 <th className="py-2.5 px-4">Patient Name & Age</th>
                 <th className="py-2.5 px-4">Triage Priority</th>
@@ -229,7 +214,7 @@ export const PatientFlowView: React.FC<PatientFlowViewProps> = ({ setActiveTab }
                     {item.status === 'admission_pending' ? (
                       <button
                         onClick={() => setActiveTab('bed-management')}
-                        className="px-2.5 py-1 text-[11px] font-semibold bg-sky-700 hover:bg-sky-800 text-white rounded-md transition-colors cursor-pointer whitespace-nowrap shadow-2xs"
+                        className="px-2.5 py-1 text-[11px] font-semibold bg-ink hover:bg-ink text-white rounded-full transition-colors cursor-pointer whitespace-nowrap shadow-2xs"
                       >
                         Allocate Bed
                       </button>

@@ -13,6 +13,13 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
+import {
+  Badge,
+  HeroCard,
+  PageHeader,
+  PillSelect,
+  ProgressBar,
+} from '../components/ui';
 import { DischargeTask } from '../types/hospital';
 
 export const DischargeCoordinationView: React.FC = () => {
@@ -33,6 +40,9 @@ export const DischargeCoordinationView: React.FC = () => {
   const patient = patients.find((p) => p.id === currentRecord?.patientId);
   const bed = beds.find((b) => b.id === currentRecord?.bedId);
 
+  const completedTasks = currentRecord ? currentRecord.tasks.filter((t) => t.status === 'completed').length : 0;
+  const blockedTasks = currentRecord ? currentRecord.tasks.filter((t) => t.status === 'blocked').length : 0;
+
   const stages = [
     'Clinical Authorization',
     'Documentation Prep',
@@ -46,42 +56,53 @@ export const DischargeCoordinationView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Multidisciplinary Departure Workflow
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Intelligent Discharge Coordination & Blocker Resolver
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Eliminates avoidable administrative and financial discharge delays while strictly preserving independent clinical governance.
-            Patient departure initiates closed-loop environmental turnover.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Multidisciplinary Departure Workflow"
+        title="Discharges"
+        description="Eliminates avoidable administrative and financial discharge delays while strictly preserving independent clinical governance. Patient departure initiates closed-loop environmental turnover."
+        actions={
+          <>
+            <PillSelect
+              value={currentRecord?.patientId ?? ''}
+              onChange={setSelectedPatientId}
+              label="Patient"
+              options={recordsList.map((r) => ({
+                value: r.patientId,
+                label: `${r.patientName} (${r.bedId})`,
+              }))}
+            />
+          </>
+        }
+      />
 
-        {/* Patient Switcher */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 font-medium">Discharge Tracking:</span>
-          <select
-            value={currentRecord?.patientId}
-            onChange={(e) => setSelectedPatientId(e.target.value)}
-            className="border border-slate-200 rounded-md px-3 py-1.5 text-xs bg-white text-slate-900 font-semibold cursor-pointer"
-          >
-            {recordsList.map((r) => (
-              <option key={r.patientId} value={r.patientId}>
-                {r.patientName} ({r.bedId}) — Stage: {r.currentStage.slice(0, 20)}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      {currentRecord && (
+        <HeroCard
+          eyebrow="Est. administrative completion"
+          value={`${currentRecord.estimatedCompletionMinutesMin}–${currentRecord.estimatedCompletionMinutesMax}`}
+          unit="minutes"
+          caption={`${currentRecord.patientName} · Bed ${currentRecord.bedId}. Calculated from pending dependencies.`}
+          status={
+            <Badge tone={blockedTasks > 0 ? 'critical' : 'ok'} className="!bg-white/10 !border-white/10 !text-white">
+              {blockedTasks > 0 ? `${blockedTasks} blocked` : 'No blockers'}
+            </Badge>
+          }
+        >
+          <div className="mt-6 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-white/60">
+              <span className="capitalize">{currentRecord.currentStage.replace(/_/g, ' ')}</span>
+              <span className="text-white font-semibold tabular-nums">
+                {completedTasks}/{currentRecord.tasks.length} tasks done
+              </span>
+            </div>
+            <ProgressBar tone="accent" value={(completedTasks / Math.max(1, currentRecord.tasks.length)) * 100} label="Discharge progress" />
+          </div>
+        </HeroCard>
+      )}
 
       {/* Discharge Summary Strip */}
       {currentRecord && (
-        <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div className="bg-card border border-line rounded-2xl p-5 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-line">
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900">
@@ -99,18 +120,7 @@ export const DischargeCoordinationView: React.FC = () => {
               </p>
             </div>
 
-            {/* Estimated Completion Window */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-right shrink-0">
-              <div className="text-[11px] text-slate-500 font-medium">
-                Est. Administrative Completion Window
-              </div>
-              <div className="text-lg font-bold font-mono text-slate-900 tabular-nums">
-                {currentRecord.estimatedCompletionMinutesMin}–{currentRecord.estimatedCompletionMinutesMax} minutes
-              </div>
-              <div className="text-[10px] text-slate-400">
-                Calculated from pending dependencies
-              </div>
-            </div>
+
           </div>
 
           {/* Delay Explanation Callout */}
@@ -132,7 +142,7 @@ export const DischargeCoordinationView: React.FC = () => {
               {!currentRecord.departureTime ? (
                 <button
                   onClick={() => completePatientDeparture(currentRecord.patientId)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md text-xs font-semibold transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-full text-xs font-semibold transition-colors cursor-pointer shadow-xs whitespace-nowrap"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Record Patient Departure & Trigger Bed Turnover</span>
@@ -150,8 +160,8 @@ export const DischargeCoordinationView: React.FC = () => {
 
       {/* Task Tracker & Interactive Dependency Table */}
       {currentRecord && (
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+        <div className="bg-card border border-line rounded-2xl overflow-hidden shadow-2xs">
+          <div className="p-4 border-b border-line flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900">
               Discharge Task Tracker & Dependency Pipeline ({currentRecord.tasks.length} Stages)
             </h3>
@@ -162,7 +172,7 @@ export const DischargeCoordinationView: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-line">
                 <tr>
                   <th className="py-2.5 px-4">Task Name</th>
                   <th className="py-2.5 px-4">Department / Role</th>
@@ -260,7 +270,7 @@ export const DischargeCoordinationView: React.FC = () => {
                                 'completed'
                               )
                             }
-                            className="px-2.5 py-1 text-[11px] font-semibold bg-sky-700 hover:bg-sky-800 text-white rounded-md cursor-pointer shadow-2xs whitespace-nowrap"
+                            className="px-2.5 py-1 text-[11px] font-semibold bg-ink hover:bg-ink text-white rounded-full cursor-pointer shadow-2xs whitespace-nowrap"
                           >
                             Mark Completed
                           </button>

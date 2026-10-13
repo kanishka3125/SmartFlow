@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Sparkles, Send, Bot, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
 import { askSmartFlow, AIResponse } from '../services/geminiService';
+import { IconButton } from './ui';
 
 interface AskSmartFlowDrawerProps {
   isOpen: boolean;
@@ -106,12 +107,18 @@ export const AskSmartFlowDrawer: React.FC<AskSmartFlowDrawerProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs transition-opacity">
-      <div className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col border-l border-slate-200">
+    <div className="fixed inset-0 z-50 flex justify-end bg-ink/30 backdrop-blur-xs transition-opacity sm:p-3" onClick={onClose}>
+      <div
+        className="w-full max-w-lg bg-card h-full shadow-2xl flex flex-col border border-line sm:rounded-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Ask SmartFlow"
+      >
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-sky-700 text-white flex items-center justify-center shadow-xs">
+        <div className="p-5 border-b border-line flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full accent-gradient text-ink flex items-center justify-center">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
@@ -119,16 +126,13 @@ export const AskSmartFlowDrawer: React.FC<AskSmartFlowDrawerProps> = ({ isOpen, 
               <div className="text-[11px] text-slate-500">Grounded Operations Intelligence</div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <IconButton label="Close assistant" size="sm" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </IconButton>
         </div>
 
         {/* Quick Prompts */}
-        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
+        <div className="px-5 py-3 border-b border-line">
           <div className="text-[11px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
             Suggested Operational Queries
           </div>
@@ -138,7 +142,7 @@ export const AskSmartFlowDrawer: React.FC<AskSmartFlowDrawerProps> = ({ isOpen, 
                 key={idx}
                 onClick={() => handleSend(p)}
                 disabled={loading}
-                className="text-left text-[11px] px-2.5 py-1 bg-white border border-slate-200 rounded-md text-slate-700 hover:text-sky-800 hover:border-sky-300 transition-colors cursor-pointer disabled:opacity-50"
+                className="text-left text-[11px] px-3 py-1.5 bg-canvas border border-line rounded-full text-ink-2 hover:text-ink hover:border-slate-300 transition-colors cursor-pointer disabled:opacity-50"
               >
                 {p}
               </button>
@@ -154,15 +158,15 @@ export const AskSmartFlowDrawer: React.FC<AskSmartFlowDrawerProps> = ({ isOpen, 
               className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-[90%] rounded-lg p-3 text-xs leading-relaxed ${
+                className={`max-w-[90%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${
                   m.role === 'user'
-                    ? 'bg-sky-800 text-white font-medium shadow-xs'
-                    : 'bg-slate-100 text-slate-900 border border-slate-200'
+                    ? 'bg-ink text-white font-medium rounded-br-md'
+                    : 'bg-canvas text-ink border border-line rounded-bl-md'
                 }`}
               >
                 <div className="whitespace-pre-wrap">{m.text}</div>
                 {m.metrics && m.metrics.length > 0 && (
-                  <div className="mt-2.5 pt-2 border-t border-slate-200 text-[10px] text-slate-500 flex items-center gap-1.5">
+                  <div className="mt-2.5 pt-2 border-t border-line text-[10px] text-slate-500 flex items-center gap-1.5">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     <span>Grounded in: {m.metrics.join(' · ')}</span>
                   </div>
@@ -185,7 +189,7 @@ export const AskSmartFlowDrawer: React.FC<AskSmartFlowDrawerProps> = ({ isOpen, 
         </div>
 
         {/* Input Bar */}
-        <div className="p-3 border-t border-slate-200 bg-white">
+        <div className="p-4 border-t border-line">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -199,12 +203,12 @@ export const AskSmartFlowDrawer: React.FC<AskSmartFlowDrawerProps> = ({ isOpen, 
               onChange={(e) => setInputQuery(e.target.value)}
               placeholder="Ask an operational question (e.g. bed turnover, queues, insurance)..."
               disabled={loading}
-              className="flex-1 text-xs px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-700 focus:border-sky-700 bg-white"
+              className="flex-1 text-xs px-4 py-2.5 border border-line rounded-full focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink bg-canvas"
             />
             <button
               type="submit"
               disabled={!inputQuery.trim() || loading}
-              className="p-2 bg-sky-800 text-white rounded-md hover:bg-sky-900 transition-colors disabled:opacity-40 cursor-pointer"
+              className="w-10 h-10 flex items-center justify-center accent-gradient text-ink rounded-full hover:brightness-105 transition disabled:opacity-40 cursor-pointer"
             >
               <Send className="w-4 h-4" />
             </button>

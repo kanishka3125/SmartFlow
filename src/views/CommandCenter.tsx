@@ -1,37 +1,80 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BedDouble,
-  Users,
   Clock,
   TrendingUp,
   AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
   Sparkles,
-  Layers,
   ShieldAlert,
   ChevronRight,
-  CheckCircle2,
+  Plus,
+  Sliders,
+  Bell,
+  Calendar,
+  Filter,
+  Ambulance,
+  HeartPulse,
+  Stethoscope,
+  Bone,
+  Scan,
+  FlaskConical,
+  Activity,
+  Scissors,
+  Layers,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
-  LineChart,
-  Line,
-  Legend,
+  ReferenceLine,
 } from 'recharts';
 import { useHospital } from '../context/HospitalContext';
 import { calculateArrivalForecast } from '../services/forecasting';
-import { NavTabId } from '../components/Sidebar';
+import { NavTabId } from '../components/navigation';
+import { DepartmentId } from '../types/hospital';
+import {
+  Card,
+  CardHeader,
+  PageHeader,
+  PillSelect,
+  PillButton,
+  IconButton,
+  HeroCard,
+  StatCard,
+  DepartmentCard,
+  CorrelationStrip,
+  Badge,
+  ChartDefs,
+  ChartTooltip,
+  ChartLegend,
+  axisProps,
+  gridProps,
+  chartColors,
+  Tone,
+} from '../components/ui';
 
 interface CommandCenterProps {
   setActiveTab: (tab: NavTabId) => void;
 }
+
+const deptIcons: Record<DepartmentId, React.ReactNode> = {
+  ED: <Ambulance className="w-4 h-4" />,
+  ICU: <Activity className="w-4 h-4" />,
+  MED: <Stethoscope className="w-4 h-4" />,
+  SURG: <Scissors className="w-4 h-4" />,
+  CARD: <HeartPulse className="w-4 h-4" />,
+  ORTHO: <Bone className="w-4 h-4" />,
+  RAD: <Scan className="w-4 h-4" />,
+  LAB: <FlaskConical className="w-4 h-4" />,
+};
+
+type RangeId = 'shift' | 'recent';
+type DeptFilter = 'all' | 'inpatient' | 'diagnostics';
 
 export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab }) => {
   const {
@@ -39,7 +82,6 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab }) =>
     occupiedBeds,
     availableBeds,
     cleaningBeds,
-    reservedBeds,
     occupancyRate,
     patientsWaitingAdmission,
     avgWaitTimeMinutes,
@@ -48,32 +90,20 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab }) =>
     activeAlertsCount,
     edBoardingCount,
     departments,
-    operationalAlerts,
+    beds,
+    diagnosticEquipment,
     autopilotPlans,
     historicalArrivals,
-    setSelectedPatientId,
   } = useHospital();
+
+  const [range, setRange] = useState<RangeId>('shift');
+  const [deptFilter, setDeptFilter] = useState<DeptFilter>('all');
 
   // Arrival forecasts for next 8 hours
   const forecasts = calculateArrivalForecast(historicalArrivals, 'ED', 1.0, availableBeds).slice(0, 8);
   const totalPredictedArrivals = forecasts.reduce((sum, f) => sum + f.predictedArrivals, 0);
 
-  // Department Occupancy Data for chart
-  const deptOccupancyData = departments
-    .filter((d) => d.totalBeds > 0)
-    .map((d) => {
-      // Calculate occupied in that dept
-      const occPercent = Math.min(100, Math.round(((d.totalBeds - Math.max(0, d.totalBeds - d.currentQueue)) / d.totalBeds) * 100));
-      return {
-        name: d.shortName,
-        beds: d.totalBeds,
-        queue: d.currentQueue,
-        wait: d.avgWaitMinutes,
-        occupancy: d.id === 'MED' ? 92 : d.id === 'CARD' ? 88 : d.id === 'ED' ? 85 : d.id === 'SURG' ? 70 : 75,
-      };
-    });
-
-  // Trend data
+  // Observed vs forecast ED intake for the current shift
   const arrivalTrendData = [
     { time: '16:00', actual: 6, forecast: 5 },
     { time: '17:00', actual: 8, forecast: 7 },
@@ -81,341 +111,310 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({ setActiveTab }) =>
     { time: '19:00', actual: 12, forecast: 11 },
     { time: '20:00', actual: 14, forecast: 13 },
     { time: '21:00', actual: 15, forecast: 14 },
-    { time: '22:00 (Now)', actual: 13, forecast: 12 },
+    { time: '22:00', actual: 13, forecast: 12 },
     { time: '23:00', actual: null, forecast: 10 },
     { time: '00:00', actual: null, forecast: 7 },
     { time: '01:00', actual: null, forecast: 5 },
   ];
+  const trendWindow = range === 'shift' ? arrivalTrendData : arrivalTrendData.slice(3);
+  const intakeBars = trendWindow.map((d) => ({
+    time: d.time,
+    arrivals: d.actual ?? d.forecast,
+    isForecast: d.actual === null,
+  }));
+  const heroSeries = arrivalTrendData.map((d) => ({ time: d.time, arrivals: d.actual ?? d.forecast }));
+
+  // Department utilization: bed ledger where available, equipment throughput for diagnostics.
+  // ED has no inpatient bed ledger, so it keeps the dashboard's existing ED occupancy figure.
+  const ED_OCCUPANCY = 85;
+  const deptCards = departments
+    .map((d) => {
+      const deptBeds = beds.filter((b) => b.departmentId === d.id);
+      const deptEquipment = diagnosticEquipment.filter((e) => e.departmentId === d.id);
+      let percent: number;
+      let detail: string;
+      if (deptBeds.length > 0) {
+        const inUse = deptBeds.filter((b) => ['occupied', 'reserved', 'discharge_pending'].includes(b.status)).length;
+        percent = (inUse / deptBeds.length) * 100;
+        detail = `${inUse}/${deptBeds.length} beds`;
+      } else if (deptEquipment.length > 0) {
+        const done = deptEquipment.reduce((s, e) => s + e.currentCompletedToday, 0);
+        const cap = deptEquipment.reduce((s, e) => s + e.dailyCapacity, 0);
+        percent = cap > 0 ? (done / cap) * 100 : 0;
+        detail = `${deptEquipment.reduce((s, e) => s + e.queueLength, 0)} queued`;
+      } else if (d.id === 'ED') {
+        percent = ED_OCCUPANCY;
+        detail = `${d.currentQueue} in queue`;
+      } else {
+        percent = 0;
+        detail = `${d.currentQueue} in queue`;
+      }
+      const tone: Tone = percent >= 90 ? 'critical' : percent >= 80 ? 'warning' : 'ok';
+      const kind: DeptFilter = d.totalBeds > 0 ? 'inpatient' : 'diagnostics';
+      return { dept: d, percent, detail, tone, kind };
+    })
+    .filter((c) => deptFilter === 'all' || c.kind === deptFilter);
+
+  const diagnosticBacklog = diagnosticEquipment.reduce((s, e) => s + e.queueLength, 0);
 
   return (
     <div className="space-y-6">
-      {/* Executive Command Banner */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Operations Command Centre · Live Telemetry
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Metropolitan Memorial Hospital — Operational Flow Overview
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Real-time status across 44 acute beds, Emergency intake, Diagnostic Radiology, and discharge workflows.
-            Elevated occupancy in General Medicine (92%) and 4 ED boarding patients requiring immediate release coordination.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Metropolitan Memorial Hospital · Live"
+        title="Command Center"
+        actions={
+          <>
+            <PillSelect
+              value={range}
+              onChange={setRange}
+              icon={<Calendar className="w-3.5 h-3.5 text-white/60" />}
+              options={[
+                { value: 'shift', label: 'This shift' },
+                { value: 'recent', label: 'Last 6 hours' },
+              ]}
+              label="Range"
+            />
+            <PillSelect
+              value={deptFilter}
+              onChange={setDeptFilter}
+              icon={<Filter className="w-3.5 h-3.5 text-white/60" />}
+              options={[
+                { value: 'all', label: 'All units' },
+                { value: 'inpatient', label: 'Inpatient wards' },
+                { value: 'diagnostics', label: 'Diagnostics' },
+              ]}
+              label="Units"
+            />
+            <IconButton label="What-if simulator" onClick={() => setActiveTab('simulator')}>
+              <Sliders className="w-4 h-4" />
+            </IconButton>
+            <IconButton label="Alerts & tasks" badge={activeAlertsCount} onClick={() => setActiveTab('alerts')}>
+              <Bell className="w-4 h-4" />
+            </IconButton>
+            <IconButton label="Recommend & allocate a bed" variant="accent" onClick={() => setActiveTab('bed-management')}>
+              <Plus className="w-5 h-5" />
+            </IconButton>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={() => setActiveTab('autopilot')}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-sky-800 text-white rounded-md text-xs font-semibold hover:bg-sky-900 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Open Flow Autopilot ({autopilotPlans.length} Plan)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('simulator')}
-            className="px-3.5 py-2 bg-white text-slate-700 border border-slate-200 rounded-md text-xs font-medium hover:bg-slate-50 transition-colors cursor-pointer whitespace-nowrap"
-          >
-            Run What-If Simulation
-          </button>
-        </div>
+      {/* KPI row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <StatCard
+          label="Occupied beds"
+          icon={<BedDouble className="w-4 h-4" />}
+          value={occupiedBeds}
+          unit={`/ ${totalBeds}`}
+          footer={`${occupancyRate}% occupancy`}
+        />
+        <StatCard
+          label="Available beds"
+          icon={<span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />}
+          value={availableBeds}
+          footer={`${cleaningBeds} in cleaning turnover`}
+        />
+        <StatCard
+          label="ED boarding"
+          icon={<ShieldAlert className="w-4 h-4 text-rose-600" />}
+          value={edBoardingCount}
+          unit="patients"
+          footer={<Badge tone="critical">&gt;90 min hold</Badge>}
+        />
+        <StatCard
+          label="Avg admission wait"
+          icon={<Clock className="w-4 h-4" />}
+          value={avgWaitTimeMinutes}
+          unit="min"
+          footer={`${patientsWaitingAdmission} waiting in queue`}
+        />
+        <StatCard
+          label="Arrival forecast · 8h"
+          icon={<TrendingUp className="w-4 h-4" />}
+          value={`~${totalPredictedArrivals}`}
+          unit="arrivals"
+          footer={<Badge tone="warning">Deficit projected</Badge>}
+        />
+        <StatCard
+          label="Discharge blockers"
+          icon={<AlertTriangle className="w-4 h-4 text-amber-600" />}
+          value={blockedDischargesCount}
+          footer={`${patientsAwaitingDischarge} awaiting discharge`}
+        />
       </div>
 
-      {/* Top 6 Primary KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* KPI 1: Bed Occupancy */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span className="font-medium">Total Beds</span>
-            <BedDouble className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-slate-900 tabular-nums">
-            {occupiedBeds}<span className="text-xs font-normal text-slate-400">/{totalBeds}</span>
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Occupancy Rate</span>
-            <span className={`font-semibold tabular-nums ${occupancyRate > 85 ? 'text-rose-700' : 'text-slate-800'}`}>
-              {occupancyRate}%
-            </span>
-          </div>
-        </div>
-
-        {/* KPI 2: Available Beds */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span className="font-medium">Available Beds</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-700 tabular-nums">
-            {availableBeds}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Cleaning Turnover</span>
-            <span className="font-medium text-amber-700 tabular-nums">{cleaningBeds} in progress</span>
-          </div>
-        </div>
-
-        {/* KPI 3: ED Boarding Risk */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span className="font-medium">ED Boarding Queue</span>
-            <ShieldAlert className="w-4 h-4 text-rose-600" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-rose-700 tabular-nums">
-            {edBoardingCount}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Holding Status</span>
-            <span className="font-medium text-rose-700">Critical (&gt;90m)</span>
-          </div>
-        </div>
-
-        {/* KPI 4: Admission Waiting Time */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span className="font-medium">Avg Admission Wait</span>
-            <Clock className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-slate-900 tabular-nums">
-            {avgWaitTimeMinutes}<span className="text-xs font-normal text-slate-400"> min</span>
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Waiting Patients</span>
-            <span className="font-medium text-slate-700 tabular-nums">{patientsWaitingAdmission} in queue</span>
-          </div>
-        </div>
-
-        {/* KPI 5: Predicted Arrivals */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span className="font-medium">Arrival Forecast (8h)</span>
-            <TrendingUp className="w-4 h-4 text-sky-700" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-sky-900 tabular-nums">
-            ~{totalPredictedArrivals}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Demand vs Capacity</span>
-            <span className="font-medium text-amber-700">Deficit Projected</span>
-          </div>
-        </div>
-
-        {/* KPI 6: Blocked Discharges */}
-        <div className="bg-white border border-slate-200 rounded-lg p-3.5">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span className="font-medium">Discharge Blockers</span>
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-amber-800 tabular-nums">
-            {blockedDischargesCount}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Awaiting Discharge</span>
-            <span className="font-medium text-slate-700 tabular-nums">{patientsAwaitingDischarge} total</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Command Grid: Charts and Priority Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column (2 spans): Charts */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Chart 1: Actual vs Forecast Arrivals */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Patient Intake & Forecast Trajectory (Emergency Medicine)
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Observed historical arrivals vs moving-average diurnal forecast for upcoming shift
-                </p>
-              </div>
-              <button
-                onClick={() => setActiveTab('arrival-forecast')}
-                className="text-xs text-sky-700 font-medium hover:underline flex items-center gap-1 cursor-pointer"
+      {/* Main 2-column grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: hero KPI + intake chart */}
+        <div className="space-y-6 min-w-0">
+          <HeroCard
+            eyebrow="Hospital bed occupancy"
+            value={occupancyRate}
+            unit="%"
+            caption={`${occupiedBeds} of ${totalBeds} acute beds occupied or reserved. ED intake trend for this shift shown below.`}
+            status={<Badge tone={occupancyRate > 85 ? 'critical' : 'ok'} className="!bg-white/10 !border-white/10 !text-white">
+              {occupancyRate > 85 ? 'Critical load' : 'Nominal'}
+            </Badge>}
+            action={
+              <PillButton
+                variant="accent"
+                size="sm"
+                icon={<Sparkles className="w-3.5 h-3.5" />}
+                onClick={() => setActiveTab('autopilot')}
               >
-                <span>Full Forecast</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="h-60 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={arrivalTrendData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" />
-                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                  <Line
-                    type="monotone"
-                    dataKey="actual"
-                    name="Actual Arrivals"
-                    stroke="#0284c7"
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#0284c7' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="forecast"
-                    name="Statistical Forecast"
-                    stroke="#94a3b8"
-                    strokeDasharray="4 4"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: '#94a3b8' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Chart 2: Department-wise Occupancy */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Department Capacity & Occupancy Rates
-                </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Bed saturation thresholds across active inpatient wards
-                </p>
+                Autopilot · {autopilotPlans.length} plan
+              </PillButton>
+            }
+            data={heroSeries}
+            xKey="time"
+            yKey="arrivals"
+            yLabel="ED arrivals"
+            footer={
+              <div className="flex items-center justify-between">
+                <span>16:00 → 01:00 (forecast after 22:00)</span>
+                <span className="text-white font-semibold tabular-nums">{availableBeds} beds free</span>
               </div>
-              <button
-                onClick={() => setActiveTab('bed-management')}
-                className="text-xs text-sky-700 font-medium hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>Manage Beds</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            }
+          />
 
+          <Card>
+            <CardHeader
+              title="ED intake vs capacity"
+              subtitle="Observed hourly arrivals with diurnal forecast; dashed line marks available bed turnover"
+              action={
+                <PillButton size="sm" onClick={() => setActiveTab('arrival-forecast')}>
+                  Full forecast <ChevronRight className="w-3.5 h-3.5" />
+                </PillButton>
+              }
+            />
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={deptOccupancyData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" />
-                  <YAxis domain={[0, 100]} unit="%" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                    }}
-                    formatter={(val: any) => [`${val}%`, 'Occupancy']}
+                <BarChart data={intakeBars} margin={{ top: 10, right: 8, left: -24, bottom: 0 }} barCategoryGap="28%">
+                  <ChartDefs idPrefix="cc" />
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="time" {...axisProps} />
+                  <YAxis {...axisProps} />
+                  <Tooltip cursor={{ fill: 'rgba(17,17,17,0.04)' }} content={<ChartTooltip unit=" pts" />} />
+                  <ReferenceLine
+                    y={availableBeds}
+                    stroke={chartColors.threshold}
+                    strokeDasharray="4 4"
+                    label={{ value: 'Capacity', position: 'insideTopRight', fontSize: 10, fill: chartColors.threshold }}
                   />
-                  <Bar dataKey="occupancy" fill="#0369a1" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="arrivals" name="Arrivals" radius={[8, 8, 8, 8]}>
+                    {intakeBars.map((d) => (
+                      <Cell key={d.time} fill={d.isForecast ? 'url(#cc-hatch)' : chartColors.ink} stroke={d.isForecast ? chartColors.violet : 'none'} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+            <div className="mt-3">
+              <ChartLegend
+                items={[
+                  { label: 'Observed', color: chartColors.ink },
+                  { label: 'Forecast', hatch: true },
+                  { label: 'Bed capacity', color: chartColors.threshold, dashed: true },
+                ]}
+              />
+            </div>
+          </Card>
+
+          <CorrelationStrip
+            title="Flow drag"
+            items={[
+              { icon: <Clock className="w-3.5 h-3.5" />, label: 'Avg wait', value: avgWaitTimeMinutes, unit: 'min' },
+              {
+                icon: <Layers className="w-3.5 h-3.5" />,
+                label: 'Discharge delay',
+                value: blockedDischargesCount,
+                unit: 'blocked',
+                hint: `${patientsAwaitingDischarge} awaiting`,
+              },
+              { icon: <Scan className="w-3.5 h-3.5" />, label: 'Diagnostic backlog', value: diagnosticBacklog, unit: 'studies' },
+            ]}
+          />
         </div>
 
-        {/* Right Column: Operational Priority Panel & Actions */}
-        <div className="space-y-6">
-          {/* Priority Panel */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-rose-600" />
-                <h3 className="text-sm font-bold text-slate-900">Operational Priority Panel</h3>
-              </div>
-              <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-sm border border-rose-200">
-                Action Required
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-3.5">
-              {/* Issue 1 */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-900">ED Inpatient Boarding Crisis</span>
-                  <span className="text-[10px] text-rose-700 font-bold uppercase">Critical</span>
-                </div>
-                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                  4 admitted patients waiting &gt;90m for inpatient beds. Jonathan Brooks (Troponin+) holding for 109m awaiting Cardiology.
-                </p>
-                <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500">Trigger: Med/Card Beds At Capacity</span>
-                  <button
-                    onClick={() => setActiveTab('autopilot')}
-                    className="text-sky-700 font-semibold hover:underline cursor-pointer"
-                  >
-                    Resolve in Autopilot →
-                  </button>
-                </div>
-              </div>
-
-              {/* Issue 2 */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-900">Discharge Blocked: Pharmacy</span>
-                  <span className="text-[10px] text-amber-700 font-bold uppercase">Delayed</span>
-                </div>
-                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                  Marcus Thorne (Bed MED-101) cleared by Dr. Finch 55m ago. Inhaler med-reconciliation pending in dispensary.
-                </p>
-                <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500">Unblocks: Bed MED-101 for ED transfer</span>
-                  <button
-                    onClick={() => setActiveTab('discharge')}
-                    className="text-sky-700 font-semibold hover:underline cursor-pointer"
-                  >
-                    View Discharge Task →
-                  </button>
-                </div>
-              </div>
-
-              {/* Issue 3 */}
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-900">UHC Insurance Query Unanswered</span>
-                  <span className="text-[10px] text-amber-700 font-bold uppercase">Query</span>
-                </div>
-                <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                  David Chen (Bed CARD-401) cannot settle final bill. UnitedHealthcare requires Day 3 telemetry necessity addendum.
-                </p>
-                <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-500">Unblocks: $20,370 claim clearance</span>
-                  <button
-                    onClick={() => setActiveTab('insurance')}
-                    className="text-sky-700 font-semibold hover:underline cursor-pointer"
-                  >
-                    Open Insurance Portal →
-                  </button>
-                </div>
-              </div>
-            </div>
+        {/* Right: department cards + priority panel */}
+        <div className="space-y-6 min-w-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {deptCards.map(({ dept, percent, detail, tone, kind }) => (
+              <DepartmentCard
+                key={dept.id}
+                icon={deptIcons[dept.id]}
+                name={dept.shortName}
+                subtitle={`${dept.avgWaitMinutes}m wait · target ${dept.targetWaitMinutes}m`}
+                percent={percent}
+                detail={detail}
+                tone={tone}
+                actions={
+                  kind === 'inpatient'
+                    ? [
+                        { label: 'Manage beds', onClick: () => setActiveTab('bed-management') },
+                        { label: 'Patient flow', onClick: () => setActiveTab('patient-flow') },
+                      ]
+                    : [{ label: 'Diagnostic operations', onClick: () => setActiveTab('diagnostics') }]
+                }
+              />
+            ))}
           </div>
 
-          {/* Quick Department Snapshot */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5">
-            <h3 className="text-sm font-bold text-slate-900 mb-3">Active Department Queue Status</h3>
-            <div className="divide-y divide-slate-100 text-xs">
-              {departments.slice(0, 5).map((d) => (
-                <div key={d.id} className="py-2.5 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-slate-800">{d.name}</div>
-                    <div className="text-[11px] text-slate-400">Head: {d.head}</div>
+          <Card>
+            <CardHeader
+              title="Operational priorities"
+              subtitle="Issues blocking flow right now"
+              icon={<AlertTriangle className="w-4 h-4" />}
+              action={<Badge tone="critical">Action required</Badge>}
+            />
+            <div className="divide-y divide-line">
+              {[
+                {
+                  title: 'ED inpatient boarding crisis',
+                  tone: 'critical' as Tone,
+                  tag: 'Critical',
+                  body: '4 admitted patients waiting >90m for inpatient beds. Jonathan Brooks (Troponin+) holding for 109m awaiting Cardiology.',
+                  meta: 'Trigger: Med/Card beds at capacity',
+                  cta: 'Resolve in Autopilot',
+                  tab: 'autopilot' as NavTabId,
+                },
+                {
+                  title: 'Discharge blocked: Pharmacy',
+                  tone: 'warning' as Tone,
+                  tag: 'Delayed',
+                  body: 'Marcus Thorne (Bed MED-101) cleared by Dr. Finch 55m ago. Inhaler med-reconciliation pending in dispensary.',
+                  meta: 'Unblocks: Bed MED-101 for ED transfer',
+                  cta: 'View discharge task',
+                  tab: 'discharge' as NavTabId,
+                },
+                {
+                  title: 'UHC insurance query unanswered',
+                  tone: 'warning' as Tone,
+                  tag: 'Query',
+                  body: 'David Chen (Bed CARD-401) cannot settle final bill. UnitedHealthcare requires Day 3 telemetry necessity addendum.',
+                  meta: 'Unblocks: $20,370 claim clearance',
+                  cta: 'Open insurance',
+                  tab: 'insurance' as NavTabId,
+                },
+              ].map((issue) => (
+                <div key={issue.title} className="py-3.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-ink">{issue.title}</span>
+                    <Badge tone={issue.tone}>{issue.tag}</Badge>
                   </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-slate-900 tabular-nums">{d.currentQueue} patients</div>
-                    <div className={`text-[11px] tabular-nums ${d.avgWaitMinutes > d.targetWaitMinutes ? 'text-amber-700' : 'text-slate-500'}`}>
-                      {d.avgWaitMinutes}m wait (Target: {d.targetWaitMinutes}m)
-                    </div>
+                  <p className="text-[11px] text-ink-2 mt-1 leading-relaxed">{issue.body}</p>
+                  <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+                    <span className="text-ink-3">{issue.meta}</span>
+                    <button
+                      onClick={() => setActiveTab(issue.tab)}
+                      className="inline-flex items-center gap-0.5 font-semibold text-ink hover:underline cursor-pointer whitespace-nowrap"
+                    >
+                      {issue.cta} <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

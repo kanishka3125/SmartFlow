@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { HospitalProvider, useHospital } from './context/HospitalContext';
-import { Sidebar, NavTabId } from './components/Sidebar';
-import { TopNav } from './components/TopNav';
+import { NavTabId } from './components/navigation';
+import { TopBar } from './components/TopBar';
 import { AskSmartFlowDrawer } from './components/AskSmartFlowDrawer';
 import { PatientDetailModal } from './components/PatientDetailModal';
 
@@ -21,26 +21,12 @@ import { ResilienceSimulatorView } from './views/ResilienceSimulatorView';
 import { DelayAnalyticsView } from './views/DelayAnalyticsView';
 import { AlertsTasksView } from './views/AlertsTasksView';
 
-const tabTitles: Record<NavTabId, string> = {
-  'command-center': 'Operations Command Centre',
-  'patient-flow': 'Patient Flow & Queue Monitoring',
-  'bed-management': 'Smart Bed Management & Allocation',
-  'arrival-forecast': 'Patient Arrival Forecasting',
-  'bottlenecks': 'Operational Bottleneck Detection',
-  'resource-utilization': 'Resource Utilization & Balancing',
-  'discharge': 'Intelligent Discharge Coordination',
-  'billing': 'SmartSettle Live Billing & Audit',
-  'insurance': 'Insurance Claim Readiness & Pre-Auth',
-  'diagnostics': 'Diagnostic Operations & Backlog Balancer',
-  'autopilot': 'Hospital Flow Autopilot Planner',
-  'simulator': 'Hospital Resilience & What-If Simulator',
-  'delay-analytics': 'Delay Diagnostics & Operational Cost Analytics',
-  'alerts': 'Unified Alerts & Operational Incident Queue',
-};
-
 const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTabId>('command-center');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [activeTab]);
 
   const {
     isAskDrawerOpen,
@@ -85,28 +71,16 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 font-sans">
-      {/* Persistent Left Sidebar */}
-      <Sidebar
+    <div className="min-h-screen bg-page text-ink font-sans">
+      <TopBar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        collapsed={sidebarCollapsed}
-        setCollapsed={setSidebarCollapsed}
+        onOpenAskDrawer={() => setIsAskDrawerOpen(true)}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Top Navigation Bar */}
-        <TopNav
-          currentTitle={tabTitles[activeTab]}
-          onOpenAskDrawer={() => setIsAskDrawerOpen(true)}
-        />
-
-        {/* Viewport Content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">{renderActiveView()}</div>
-        </main>
-      </div>
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12">
+        {renderActiveView()}
+      </main>
 
       {/* Grounded Operations Assistant Slide-Over Drawer */}
       <AskSmartFlowDrawer

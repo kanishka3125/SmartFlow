@@ -11,8 +11,18 @@ import {
   Filter,
   ArrowRight,
   Receipt,
+  Plus,
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
+import {
+  Badge,
+  HeroCard,
+  IconButton,
+  PageHeader,
+  PillSelect,
+  StatCard,
+  Tabs,
+} from '../components/ui';
 import { BillingChargeCategory, BillingCharge } from '../types/hospital';
 
 export const SmartSettleView: React.FC = () => {
@@ -60,6 +70,18 @@ export const SmartSettleView: React.FC = () => {
   const totalPayments = currentAccount.payments.reduce((sum, p) => sum + p.amount, 0);
   const approvedInsurance = currentClaim ? currentClaim.approvedAmount : 0;
   const provisionalPatientBalance = Math.max(0, totalCharges - approvedInsurance - totalPayments);
+
+  const runningTotal = [...charges]
+    .filter((c) => c.status !== 'reversed')
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+    .reduce<{ time: string; total: number }[]>((acc, c) => {
+      const prev = acc.length ? acc[acc.length - 1].total : 0;
+      acc.push({
+        time: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        total: prev + c.amount,
+      });
+      return acc;
+    }, []);
 
   // Simulate charge event helper
   const handleQuickSimulate = (cat: BillingChargeCategory, desc: string, amt: number) => {
@@ -110,37 +132,24 @@ export const SmartSettleView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Financial Coordination & Settlement
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            SmartSettle — Live Running Inpatient Billing & Audit
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Continuous real-time charge capture across pharmacy, clinical laboratory, operating theaters, and room tariffs.
-            Eliminates end-of-stay billing bottlenecks with automatic duplicate detection and idempotent auditing.
-          </p>
-        </div>
-
-        {/* Patient Selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 font-medium">Inpatient Account:</span>
-          <select
-            value={selectedPatientId}
-            onChange={(e) => setSelectedPatientId(e.target.value)}
-            className="border border-slate-200 rounded-md px-3 py-1.5 text-xs bg-white text-slate-900 font-semibold cursor-pointer"
-          >
-            {patients.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.fullName} ({p.mrn}) — {p.admittingDiagnosis.slice(0, 30)}...
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Financial Coordination & Settlement"
+        title="SmartSettle Billing"
+        description="Continuous real-time charge capture across pharmacy, clinical laboratory, operating theaters, and room tariffs. Eliminates end-of-stay billing bottlenecks with automatic duplicate detection and idempotent auditing."
+        actions={
+          <>
+            <PillSelect
+              value={selectedPatientId}
+              onChange={setSelectedPatientId}
+              label="Account"
+              options={patients.map((p) => ({ value: p.id, label: `${p.fullName} (${p.mrn})` }))}
+            />
+            <IconButton label="Add custom charge" variant="accent" onClick={() => setIsSimulateModalOpen(true)}>
+              <Plus className="w-5 h-5" />
+            </IconButton>
+          </>
+        }
+      />
 
       {/* Notification Toast */}
       {notification && (
@@ -166,54 +175,55 @@ export const SmartSettleView: React.FC = () => {
       )}
 
       {/* Financial Settlement Snapshot Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-xs text-slate-500 font-medium">Total Billed Charges</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 tabular-nums">
-            ${totalCharges.toLocaleString()}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            {charges.length} line items recorded
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-xs text-slate-500 font-medium">Verified / Audited</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-emerald-700 tabular-nums">
-            ${totalVerified.toLocaleString()}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            {totalPendingVerification > 0 ? (
-              <span className="text-amber-700 font-medium">${totalPendingVerification.toLocaleString()} unverified</span>
-            ) : (
-              '100% verified'
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-xs text-slate-500 font-medium">Confirmed Insurance Advance</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-sky-800 tabular-nums">
-            ${approvedInsurance.toLocaleString()}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            {currentClaim?.insurerName || 'Self-Pay Account'}
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-xs text-slate-500 font-medium">Provisional Patient Co-Pay</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 tabular-nums">
-            ${provisionalPatientBalance.toLocaleString()}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            Paid to date: ${totalPayments.toLocaleString()}
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HeroCard
+          eyebrow="Total billed charges"
+          value={`$${totalCharges.toLocaleString()}`}
+          caption={`${charges.length} line items on ${currentPatient?.fullName ?? 'this account'}'s running ledger.`}
+          status={
+            <Badge tone={totalDisputed > 0 ? 'warning' : 'ok'} className="!bg-white/10 !border-white/10 !text-white">
+              {totalDisputed > 0 ? `$${totalDisputed.toLocaleString()} disputed` : 'No disputes'}
+            </Badge>
+          }
+          data={runningTotal}
+          xKey="time"
+          yKey="total"
+          yLabel="Running total ($)"
+          footer={
+            <div className="flex items-center justify-between">
+              <span>Cumulative charges over the stay</span>
+              <span className="text-white font-semibold tabular-nums">${provisionalPatientBalance.toLocaleString()} co-pay</span>
+            </div>
+          }
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
+          <StatCard
+            label="Verified / audited"
+            value={`$${totalVerified.toLocaleString()}`}
+            footer={
+              totalPendingVerification > 0 ? (
+                <Badge tone="warning">${totalPendingVerification.toLocaleString()} unverified</Badge>
+              ) : (
+                '100% verified'
+              )
+            }
+          />
+          <StatCard
+            label="Confirmed insurance advance"
+            value={`$${approvedInsurance.toLocaleString()}`}
+            footer={currentClaim?.insurerName || 'Self-pay account'}
+          />
+          <StatCard
+            className="sm:col-span-2"
+            label="Provisional patient co-pay"
+            value={`$${provisionalPatientBalance.toLocaleString()}`}
+            footer={`Paid to date: $${totalPayments.toLocaleString()}`}
+          />
         </div>
       </div>
 
       {/* Charge Simulation Event Bar */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4">
+      <div className="bg-card border border-line rounded-2xl p-5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
           <div>
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
@@ -225,7 +235,7 @@ export const SmartSettleView: React.FC = () => {
           </div>
           <button
             onClick={() => setIsSimulateModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
           >
             <PlusCircle className="w-3.5 h-3.5" />
             <span>Custom Charge</span>
@@ -235,28 +245,28 @@ export const SmartSettleView: React.FC = () => {
         <div className="flex flex-wrap gap-2 text-xs">
           <button
             onClick={() => handleQuickSimulate('pharmacy', 'Dispense: IV Ceftriaxone 1g & Infusion Set', 185)}
-            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md text-slate-800 font-medium transition-colors cursor-pointer"
+            className="px-4 py-2 bg-card hover:border-slate-300 border border-line rounded-full text-ink font-medium transition-colors cursor-pointer"
           >
             + Pharmacy Dispense ($185)
           </button>
 
           <button
             onClick={() => handleQuickSimulate('diagnostic', 'Lab: Comprehensive Metabolic Panel (CMP)', 240)}
-            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md text-slate-800 font-medium transition-colors cursor-pointer"
+            className="px-4 py-2 bg-card hover:border-slate-300 border border-line rounded-full text-ink font-medium transition-colors cursor-pointer"
           >
             + Lab Test Performed ($240)
           </button>
 
           <button
             onClick={() => handleQuickSimulate('procedure', 'Bedside Ultrasound Guided Paracentesis', 650)}
-            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md text-slate-800 font-medium transition-colors cursor-pointer"
+            className="px-4 py-2 bg-card hover:border-slate-300 border border-line rounded-full text-ink font-medium transition-colors cursor-pointer"
           >
             + Procedure Performed ($650)
           </button>
 
           <button
             onClick={() => handleQuickSimulate('meal', 'Therapeutic Renal Diet Nutrition Tray', 45)}
-            className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md text-slate-800 font-medium transition-colors cursor-pointer"
+            className="px-4 py-2 bg-card hover:border-slate-300 border border-line rounded-full text-ink font-medium transition-colors cursor-pointer"
           >
             + Meal Charge ($45)
           </button>
@@ -270,7 +280,7 @@ export const SmartSettleView: React.FC = () => {
                 handleQuickSimulate(target.category, target.description, target.amount);
               }
             }}
-            className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-md font-medium transition-colors cursor-pointer"
+            className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 rounded-full font-medium transition-colors cursor-pointer"
             title="Attempts to submit duplicate charge to demonstrate idempotency guard"
           >
             ⚠ Test Duplicate Submission
@@ -279,8 +289,8 @@ export const SmartSettleView: React.FC = () => {
       </div>
 
       {/* Itemized Charges Ledger Table */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+      <div className="bg-card border border-line rounded-2xl overflow-hidden shadow-2xs">
+        <div className="p-4 border-b border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Receipt className="w-4 h-4 text-sky-700" />
             <h3 className="text-sm font-bold text-slate-900">
@@ -289,26 +299,20 @@ export const SmartSettleView: React.FC = () => {
           </div>
 
           {/* Category Filter Tabs */}
-          <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-md">
-            {['all', 'room', 'pharmacy', 'diagnostic', 'procedure', 'nursing', 'meal'].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={`px-2.5 py-1 text-xs font-medium rounded-sm uppercase transition-colors cursor-pointer ${
-                  categoryFilter === cat
-                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            size="sm"
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            items={['all', 'room', 'pharmacy', 'diagnostic', 'procedure', 'nursing', 'meal'].map((cat) => ({
+              id: cat,
+              label: <span className="capitalize">{cat}</span>,
+            }))}
+          />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-line">
               <tr>
                 <th className="py-2.5 px-4">TX ID</th>
                 <th className="py-2.5 px-4">Timestamp</th>
@@ -378,7 +382,7 @@ export const SmartSettleView: React.FC = () => {
                           {!isVerified && (
                             <button
                               onClick={() => verifyBillingCharge(selectedPatientId, c.id)}
-                              className="px-2 py-0.5 text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-sm cursor-pointer"
+                              className="px-2 py-0.5 text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-full cursor-pointer"
                               title="Verify Charge"
                             >
                               Verify
@@ -386,7 +390,7 @@ export const SmartSettleView: React.FC = () => {
                           )}
                           <button
                             onClick={() => setReversingChargeId(c.id)}
-                            className="px-2 py-0.5 text-[11px] text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-sm cursor-pointer"
+                            className="px-2 py-0.5 text-[11px] text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-full cursor-pointer"
                             title="Reverse Charge"
                           >
                             Reverse
@@ -404,8 +408,8 @@ export const SmartSettleView: React.FC = () => {
 
       {/* Reversal Confirmation Modal */}
       {reversingChargeId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-lg p-5 max-w-md w-full border border-slate-200 shadow-xl space-y-4 text-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs p-4">
+          <div className="bg-card rounded-2xl p-6 max-w-md w-full border border-line shadow-2xl space-y-4 text-xs">
             <h3 className="text-sm font-bold text-slate-900">Confirm Charge Reversal</h3>
             <p className="text-slate-600">
               Provide an audit reason for crediting this transaction. A credit memo will be recorded on the running account ledger.
@@ -413,7 +417,7 @@ export const SmartSettleView: React.FC = () => {
             <textarea
               value={reversalReason}
               onChange={(e) => setReversalReason(e.target.value)}
-              className="w-full p-2 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-sky-700"
+              className="w-full p-2 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-ink"
               rows={3}
             />
             <div className="flex justify-end gap-2">
@@ -425,7 +429,7 @@ export const SmartSettleView: React.FC = () => {
               </button>
               <button
                 onClick={() => handleExecuteReversal(reversingChargeId)}
-                className="px-3 py-1.5 bg-rose-700 text-white rounded-md font-semibold hover:bg-rose-800 cursor-pointer"
+                className="px-3 py-1.5 bg-rose-700 text-white rounded-full font-semibold hover:bg-rose-800 cursor-pointer"
               >
                 Confirm Reversal
               </button>
@@ -436,8 +440,8 @@ export const SmartSettleView: React.FC = () => {
 
       {/* Manual Add Charge Modal */}
       {isSimulateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-lg p-5 max-w-md w-full border border-slate-200 shadow-xl space-y-4 text-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs p-4">
+          <div className="bg-card rounded-2xl p-6 max-w-md w-full border border-line shadow-2xl space-y-4 text-xs">
             <h3 className="text-sm font-bold text-slate-900">Add Clinical Charge to Ledger</h3>
             <form onSubmit={handleManualAdd} className="space-y-3">
               <div>
@@ -489,7 +493,7 @@ export const SmartSettleView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 bg-sky-800 text-white rounded-md font-semibold hover:bg-sky-900 cursor-pointer"
+                  className="px-3.5 py-1.5 bg-ink text-white rounded-full font-semibold hover:bg-slate-800 cursor-pointer"
                 >
                   Post Charge
                 </button>

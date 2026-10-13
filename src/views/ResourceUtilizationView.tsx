@@ -10,6 +10,13 @@ import {
   Check,
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
+import {
+  Badge,
+  DepartmentCard,
+  HeroCard,
+  PageHeader,
+  ProgressBar,
+} from '../components/ui';
 
 export const ResourceUtilizationView: React.FC = () => {
   const { departments, staffMembers, diagnosticEquipment, beds, role } = useHospital();
@@ -27,39 +34,74 @@ export const ResourceUtilizationView: React.FC = () => {
     };
   });
 
+  const equipmentUtil = diagnosticEquipment.map((eq) => ({
+    id: eq.id,
+    util: Math.min(100, Math.round((eq.currentCompletedToday / eq.dailyCapacity) * 100)),
+  }));
+  const avgEquipmentUtil = Math.round(
+    equipmentUtil.reduce((s, e) => s + e.util, 0) / Math.max(1, equipmentUtil.length)
+  );
+  const busyEquipment = diagnosticEquipment.filter((e) => e.status === 'busy').length;
+  const totalEquipmentQueue = diagnosticEquipment.reduce((s, e) => s + e.queueLength, 0);
+
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Workforce & Asset Optimization
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Resource Utilization & Cross-Department Capacity Balancing
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Identifies imbalances between patient demand and active staff/equipment capacity.
-            Recommends qualified cross-coverage reallocations with human supervisory sign-off.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Workforce & Asset Optimization"
+        title="Resources"
+        description="Identifies imbalances between patient demand and active staff/equipment capacity. Recommends qualified cross-coverage reallocations with human supervisory sign-off."
+        actions={
+          <>
+            <Badge tone="ok">Supervisor approval required</Badge>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Human Governance:</span>
-          <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-            Supervisor Approval Required
-          </span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HeroCard
+          eyebrow="Diagnostic equipment utilization"
+          value={avgEquipmentUtil}
+          unit="%"
+          caption={`${diagnosticEquipment.length} monitored devices · ${staffMembers.filter((s) => s.isAvailable).length} of ${staffMembers.length} staff available.`}
+          status={<Badge tone={avgEquipmentUtil > 80 ? 'warning' : 'ok'} className="!bg-white/10 !border-white/10 !text-white">{busyEquipment} busy</Badge>}
+          data={equipmentUtil}
+          xKey="id"
+          yKey="util"
+          yLabel="Daily capacity used %"
+          footer={
+            <div className="flex items-center justify-between">
+              <span>Daily capacity used by device</span>
+              <span className="text-white font-semibold tabular-nums">{totalEquipmentQueue} queued</span>
+            </div>
+          }
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
+          {staffByDept
+            .filter((d) => d.staffCount > 0)
+            .slice(0, 4)
+            .map((d) => {
+              const onShift = d.shiftList.length;
+              const available = d.shiftList.filter((s) => s.isAvailable).length;
+              return (
+                <DepartmentCard
+                  key={d.id}
+                  icon={<Users className="w-4 h-4" />}
+                  name={d.department}
+                  subtitle={`${d.staffCount} active staff`}
+                  percent={onShift > 0 ? (available / onShift) * 100 : 0}
+                  detail={`${available}/${onShift} available`}
+                />
+              );
+            })}
         </div>
       </div>
 
       {/* Resource Balancing Recommendation Card */}
-      <div className="bg-white border border-amber-200 rounded-lg p-5 shadow-xs">
+      <div className="bg-card border border-line rounded-2xl p-5 shadow-2xs">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-amber-50 text-amber-800 border border-amber-200 uppercase">
-                Recommendation Pending Review
-              </span>
+              <Badge tone="warning">Pending review</Badge>
               <span className="text-xs text-slate-600 font-semibold">
                 Central Inpatient Pharmacy & Float Nursing
               </span>
@@ -79,7 +121,7 @@ export const ResourceUtilizationView: React.FC = () => {
             {!rebalanceApproved ? (
               <button
                 onClick={() => setRebalanceApproved(true)}
-                className="px-4 py-2 bg-sky-800 hover:bg-sky-900 text-white rounded-md text-xs font-semibold cursor-pointer shadow-xs whitespace-nowrap"
+                className="px-4 py-2 bg-ink hover:bg-slate-800 text-white rounded-full text-xs font-semibold cursor-pointer shadow-xs whitespace-nowrap"
               >
                 Approve Reallocation
               </button>
@@ -96,8 +138,8 @@ export const ResourceUtilizationView: React.FC = () => {
       {/* Grid: Staff Coverage and Equipment Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Department Staffing Coverage */}
-        <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div className="bg-card border border-line rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-line">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-sky-700" />
               <h3 className="text-sm font-bold text-slate-900">
@@ -132,8 +174,8 @@ export const ResourceUtilizationView: React.FC = () => {
         </div>
 
         {/* Right: Diagnostic Equipment Utilization */}
-        <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div className="bg-card border border-line rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-line">
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-sky-700" />
               <h3 className="text-sm font-bold text-slate-900">
@@ -168,15 +210,7 @@ export const ResourceUtilizationView: React.FC = () => {
                     <span className="font-mono font-medium text-slate-800">{utilPercent}% Daily Capacity</span>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${
-                        utilPercent > 80 ? 'bg-amber-600' : 'bg-sky-700'
-                      }`}
-                      style={{ width: `${utilPercent}%` }}
-                    />
-                  </div>
+                  <ProgressBar value={utilPercent} label={`${eq.name} utilization`} />
                 </div>
               );
             })}

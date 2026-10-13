@@ -16,8 +16,22 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
 } from 'recharts';
+import {
+  Badge,
+  Card,
+  CardHeader,
+  ChartDefs,
+  ChartLegend,
+  ChartTooltip,
+  CorrelationStrip,
+  HeroCard,
+  PageHeader,
+  StatCard,
+  axisProps,
+  chartColors,
+  gridProps,
+} from '../components/ui';
 
 export const DelayAnalyticsView: React.FC = () => {
   const [costPerHour, setCostPerHour] = useState(125); // Configurable hospital bed-hour opportunity cost
@@ -37,113 +51,111 @@ export const DelayAnalyticsView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Operational Efficiency & Fiscal Analytics
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Delay Diagnostics & Operational Cost Analytics
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Quantifies operational friction across clinical handoffs, measuring lost bed-hours and opportunity cost
-            resulting from avoidable administrative, pharmacy, and payor processing delays.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Operational Efficiency & Fiscal Analytics"
+        title="Delay & Cost"
+        description="Quantifies operational friction across clinical handoffs, measuring lost bed-hours and opportunity cost resulting from avoidable administrative, pharmacy, and payor processing delays."
+        actions={
+          <>
+            <label className="flex items-center gap-2 rounded-full bg-ink text-white pl-3.5 pr-2 py-1.5 text-xs">
+              <span className="text-white/60 font-medium">Bed-hour cost</span>
+              <span className="font-semibold">$</span>
+              <input
+                type="number"
+                min="50"
+                max="500"
+                step="5"
+                value={costPerHour}
+                onChange={(e) => setCostPerHour(parseInt(e.target.value) || 125)}
+                className="w-16 rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white tabular-nums outline-none"
+              />
+              <span className="text-white/60 pr-1">/hr</span>
+            </label>
+          </>
+        }
+      />
 
-        {/* Cost Assumption Input */}
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-xs">
-          <span className="text-slate-600 font-medium">Bed-Hour Cost Assumption:</span>
-          <span className="font-bold text-slate-900 font-mono">$</span>
-          <input
-            type="number"
-            min="50"
-            max="500"
-            step="5"
-            value={costPerHour}
-            onChange={(e) => setCostPerHour(parseInt(e.target.value) || 125)}
-            className="w-16 border border-slate-300 rounded px-1.5 py-0.5 text-xs font-mono font-bold bg-white text-slate-900"
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HeroCard
+          eyebrow="Cumulative lost bed-hours"
+          value={totalLostBedHours.toFixed(1)}
+          unit="bed-hours"
+          caption="Equivalent to ~3.6 full inpatient hospital days lost to avoidable process friction."
+          status={<Badge tone="critical" className="!bg-white/10 !border-white/10 !text-white">{delayData.length} workflows</Badge>}
+          data={delayData}
+          xKey="category"
+          yKey="bedHoursLost"
+          yLabel="Bed-hours lost"
+          footer={
+            <div className="flex items-center justify-between">
+              <span>Lost bed-hours by workflow</span>
+              <span className="text-white font-semibold tabular-nums">${totalFinancialImpact.toLocaleString()}</span>
+            </div>
+          }
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
+          <StatCard
+            label="Operational opportunity cost"
+            icon={<DollarSign className="w-4 h-4" />}
+            value={`$${totalFinancialImpact.toLocaleString()}`}
+            footer={`At $${costPerHour}/bed-hour benchmark`}
           />
-          <span className="text-slate-400">/hr</span>
-        </div>
-      </div>
-
-      {/* Financial & Time Lost Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-xs font-medium text-slate-500">Cumulative Lost Bed-Hours</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-rose-700 tabular-nums">
-            {totalLostBedHours.toFixed(1)} <span className="text-xs font-normal text-slate-400">bed-hours</span>
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            Equivalent to ~3.6 full inpatient hospital days
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-xs font-medium text-slate-500">Operational Opportunity Cost</div>
-          <div className="mt-1 text-2xl font-bold font-mono text-slate-900 tabular-nums">
-            ${totalFinancialImpact.toLocaleString()}
-          </div>
-          <div className="mt-1 text-[11px] text-slate-500">
-            At configured ${costPerHour}/bed-hour facility cost benchmark
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-lg p-4">
-          <div className="text-xs font-medium text-slate-500">Largest Bottleneck Category</div>
-          <div className="mt-1 text-sm font-bold text-slate-900">
-            Insurance Query Response (55m avg delay)
-          </div>
-          <div className="mt-1 text-[11px] text-amber-700 font-medium">
-            24.0 bed-hours wasted waiting on payor addendums
-          </div>
+          <StatCard
+            label="Largest bottleneck"
+            icon={<AlertTriangle className="w-4 h-4 text-amber-600" />}
+            value={55}
+            unit="min avg delay"
+            footer="Insurance query response · 24.0 bed-hours"
+          />
+          <CorrelationStrip
+            className="sm:col-span-2"
+            items={[
+              { icon: <Clock className="w-3.5 h-3.5" />, label: 'Pharmacy med-rec', value: '+43', unit: 'min' },
+              { icon: <Layers className="w-3.5 h-3.5" />, label: 'Bed turnover', value: '+22', unit: 'min' },
+              { icon: <BarChart3 className="w-3.5 h-3.5" />, label: 'CT decision latency', value: '+28', unit: 'min' },
+            ]}
+          />
         </div>
       </div>
 
       {/* Delay Comparison Chart */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5">
-        <div className="mb-4">
-          <h3 className="text-sm font-bold text-slate-900">
-            Observed Duration vs SLA Target by Workflow Category (Minutes)
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            Breakdown of process friction where operational time is currently lost
-          </p>
-        </div>
-
+      <Card>
+        <CardHeader
+          title="Observed duration vs SLA target"
+          subtitle="Minutes per workflow; hatched bars are the SLA target, dark bars the observed average"
+        />
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={delayData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="category" tick={{ fontSize: 10, fill: '#64748b' }} stroke="#cbd5e1" />
-              <YAxis unit="m" tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-              <Bar dataKey="targetMin" name="Target SLA (mins)" fill="#94a3b8" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="observedMin" name="Observed Actual (mins)" fill="#0369a1" radius={[3, 3, 0, 0]} />
+            <BarChart data={delayData} margin={{ top: 10, right: 8, left: -24, bottom: 0 }} barGap={4} barCategoryGap="24%">
+              <ChartDefs idPrefix="delay" />
+              <CartesianGrid {...gridProps} />
+              <XAxis dataKey="category" {...axisProps} tick={{ fontSize: 10, fill: chartColors.axis }} interval={0} tickFormatter={(v: string) => v.split(' ')[0]} />
+              <YAxis unit="m" {...axisProps} />
+              <Tooltip cursor={{ fill: 'rgba(17,17,17,0.04)' }} content={<ChartTooltip unit="m" />} />
+              <Bar dataKey="targetMin" name="Target SLA" fill="url(#delay-hatch)" stroke={chartColors.violet} radius={[8, 8, 8, 8]} />
+              <Bar dataKey="observedMin" name="Observed" fill={chartColors.ink} radius={[8, 8, 8, 8]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+        <div className="mt-3">
+          <ChartLegend
+            items={[
+              { label: 'Observed', color: chartColors.ink },
+              { label: 'SLA target', hatch: true },
+            ]}
+          />
+        </div>
+      </Card>
 
       {/* Delay Impact Table */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50/50">
+      <div className="bg-card border border-line rounded-2xl overflow-hidden shadow-2xs">
+        <div className="p-4 border-b border-line">
           <h3 className="text-sm font-bold text-slate-900">Workflow Bottleneck Delay & Cost Impact Audit</h3>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-line">
               <tr>
                 <th className="py-2.5 px-4">Workflow Process</th>
                 <th className="py-2.5 px-4 text-center">Observed Avg</th>

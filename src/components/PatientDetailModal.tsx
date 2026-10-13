@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, User, Activity, FileText, ShieldCheck, BedDouble, AlertCircle } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
+import { Badge, IconButton, PillButton } from './ui';
 
 interface PatientDetailModalProps {
   patientId: string;
@@ -24,12 +25,18 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patientI
   const outstanding = Math.max(0, totalCharges - totalPaid - (claim?.approvedAmount || 0));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-      <div className="bg-white rounded-lg shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs p-4" onClick={onClose}>
+      <div
+        className="bg-card rounded-2xl shadow-2xl border border-line w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${patient.fullName} profile`}
+      >
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div className="p-5 border-b border-line flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-800 font-bold text-sm">
+            <div className="w-11 h-11 rounded-full accent-gradient flex items-center justify-center text-ink font-semibold text-sm">
               {patient.fullName
                 .split(' ')
                 .map((n) => n[0])
@@ -45,12 +52,9 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patientI
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <IconButton label="Close profile" size="sm" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </IconButton>
         </div>
 
         {/* Modal Body */}
@@ -87,9 +91,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patientI
                   <Activity className="w-4 h-4 text-sky-700" />
                   <span>Discharge Workflow Status</span>
                 </span>
-                <span className="text-[11px] font-semibold text-sky-800 bg-sky-50 px-2 py-0.5 rounded-sm border border-sky-200">
-                  Stage: {discharge.currentStage.replace(/_/g, ' ')}
-                </span>
+                <Badge tone="info">{discharge.currentStage.replace(/_/g, ' ')}</Badge>
               </div>
               <div className="text-xs text-slate-600 mb-2">{discharge.delayExplanation}</div>
               <div className="text-[11px] text-slate-500">
@@ -106,9 +108,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patientI
                   <ShieldCheck className="w-4 h-4 text-emerald-700" />
                   <span>Insurance Claim Status</span>
                 </span>
-                <span className="text-[11px] font-semibold uppercase text-slate-700 bg-slate-100 px-2 py-0.5 rounded-sm border border-slate-200">
-                  {claim.status.replace(/_/g, ' ')}
-                </span>
+                <Badge>{claim.status.replace(/_/g, ' ')}</Badge>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div>
@@ -139,7 +139,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patientI
           {/* Live Billing Itemized Charges */}
           {account && (
             <div className="border border-slate-200 rounded-md overflow-hidden">
-              <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <div className="p-3 bg-slate-50 border-b border-line flex items-center justify-between">
                 <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
                   <FileText className="w-4 h-4 text-slate-600" />
                   <span>SmartSettle Live Charges ({account.charges.length} Items)</span>
@@ -150,7 +150,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patientI
               </div>
               <div className="max-h-48 overflow-y-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50/50 text-slate-500 text-[11px] border-b border-slate-200">
+                  <thead className="bg-slate-50/50 text-slate-500 text-[11px] border-b border-line">
                     <tr>
                       <th className="py-2 px-3">Date</th>
                       <th className="py-2 px-3">Category</th>
@@ -186,13 +186,10 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({ patientI
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-slate-900 text-white rounded-md text-xs font-medium hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            Close Profile
-          </button>
+        <div className="p-4 border-t border-line flex justify-end">
+          <PillButton variant="dark" onClick={onClose}>
+            Close profile
+          </PillButton>
         </div>
       </div>
     </div>

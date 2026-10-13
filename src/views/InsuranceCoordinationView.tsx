@@ -11,6 +11,14 @@ import {
   FileText,
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
+import {
+  Badge,
+  HeroCard,
+  PageHeader,
+  PillSelect,
+  ProgressBar,
+  StatCard,
+} from '../components/ui';
 import { InsuranceClaim } from '../types/hospital';
 
 export const InsuranceCoordinationView: React.FC = () => {
@@ -28,43 +36,60 @@ export const InsuranceCoordinationView: React.FC = () => {
 
   const claimsList = Object.values(insuranceClaims);
   const activeClaim = claimsList.find((c) => c.id === selectedClaimId) || claimsList[0];
+  const totalRequested = claimsList.reduce((s, c) => s + c.requestedAmount, 0);
+  const totalApproved = claimsList.reduce((s, c) => s + c.approvedAmount, 0);
+  const openQueries = claimsList.reduce((s, c) => s + c.queries.filter((q) => !q.isResolved).length, 0);
 
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Payor & Pre-Authorization Gateway
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Insurance Claim Readiness & Query Resolution
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Prepare pre-authorization packets earlier, track missing clinical documentation, and answer insurer queries
-            before patient discharge to eliminate settlement delays.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Payor & Pre-Authorization Gateway"
+        title="Insurance"
+        description="Prepare pre-authorization packets earlier, track missing clinical documentation, and answer insurer queries before patient discharge to eliminate settlement delays."
+        actions={
+          <>
+            <PillSelect
+              value={activeClaim?.id ?? ''}
+              onChange={setSelectedClaimId}
+              label="Claim"
+              options={claimsList.map((c) => ({ value: c.id, label: `${c.patientName} — ${c.insurerName}` }))}
+            />
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 font-medium">Active Claim:</span>
-          <select
-            value={activeClaim?.id}
-            onChange={(e) => setSelectedClaimId(e.target.value)}
-            className="border border-slate-200 rounded-md px-3 py-1.5 text-xs bg-white text-slate-900 font-semibold cursor-pointer"
-          >
-            {claimsList.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.patientName} — {c.insurerName} ({c.status})
-              </option>
-            ))}
-          </select>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HeroCard
+          eyebrow="Approved insurance cover"
+          value={`$${totalApproved.toLocaleString()}`}
+          caption={`of $${totalRequested.toLocaleString()} requested across ${claimsList.length} inpatient claims.`}
+          status={<Badge tone={openQueries > 0 ? 'warning' : 'ok'} className="!bg-white/10 !border-white/10 !text-white">{openQueries} open queries</Badge>}
+        >
+          <div className="mt-6 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-white/60">
+              <span>Approval coverage</span>
+              <span className="text-white font-semibold tabular-nums">
+                {Math.round((totalApproved / Math.max(1, totalRequested)) * 100)}%
+              </span>
+            </div>
+            <ProgressBar tone="accent" value={(totalApproved / Math.max(1, totalRequested)) * 100} label="Approval coverage" />
+          </div>
+        </HeroCard>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
+          {(['documents_pending', 'query_raised', 'ready_for_submission', 'approved'] as const).map((status) => (
+            <StatCard
+              key={status}
+              label={status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}
+              value={claimsList.filter((c) => c.status === status).length}
+              unit="claims"
+            />
+          ))}
         </div>
       </div>
 
       {/* Claims Overview Table */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-card border border-line rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-line flex items-center justify-between bg-slate-50/50">
           <h3 className="text-sm font-bold text-slate-900">Inpatient Insurance Claim Pipeline</h3>
           <div className="text-xs text-slate-500">
             Real-time status synced with hospital case management
@@ -73,7 +98,7 @@ export const InsuranceCoordinationView: React.FC = () => {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-line">
               <tr>
                 <th className="py-2.5 px-4">Claim ID</th>
                 <th className="py-2.5 px-4">Patient Name</th>
@@ -151,8 +176,8 @@ export const InsuranceCoordinationView: React.FC = () => {
       {activeClaim && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left: Required Documents Checklist */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+          <div className="bg-card border border-line rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
               <div className="flex items-center gap-2">
                 <FileCheck className="w-4 h-4 text-sky-700" />
                 <h3 className="text-sm font-bold text-slate-900">
@@ -183,7 +208,7 @@ export const InsuranceCoordinationView: React.FC = () => {
                     ) : (
                       <button
                         onClick={() => updateClaimDocStatus(activeClaim.id, doc.docType, true, true)}
-                        className="px-2.5 py-1 bg-sky-700 hover:bg-sky-800 text-white rounded-md text-[11px] font-semibold cursor-pointer shadow-2xs"
+                        className="px-2.5 py-1 bg-ink hover:bg-ink text-white rounded-full text-[11px] font-semibold cursor-pointer shadow-2xs"
                       >
                         Upload & Verify
                       </button>
@@ -195,8 +220,8 @@ export const InsuranceCoordinationView: React.FC = () => {
           </div>
 
           {/* Right: Insurer Queries & Medical Review Resolution */}
-          <div className="bg-white border border-slate-200 rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+          <div className="bg-card border border-line rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600" />
                 <h3 className="text-sm font-bold text-slate-900">
@@ -214,9 +239,9 @@ export const InsuranceCoordinationView: React.FC = () => {
               </div>
             ) : (
               activeClaim.queries.map((q) => (
-                <div key={q.id} className="p-4 bg-amber-50/60 border border-amber-200 rounded-lg space-y-3 text-xs">
+                <div key={q.id} className="p-4 bg-canvas border border-line rounded-xl space-y-3 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-amber-900 font-mono">{q.id}</span>
+                    <span className="font-bold text-ink font-mono">{q.id}</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase ${
                       q.isResolved ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                     }`}>
@@ -224,7 +249,7 @@ export const InsuranceCoordinationView: React.FC = () => {
                     </span>
                   </div>
 
-                  <p className="text-slate-800 font-medium leading-relaxed bg-white/70 p-2.5 rounded-md border border-amber-100">
+                  <p className="text-slate-800 font-medium leading-relaxed bg-card p-2.5 rounded-xl border border-line">
                     "{q.queryText}"
                   </p>
 
@@ -236,12 +261,12 @@ export const InsuranceCoordinationView: React.FC = () => {
                       <textarea
                         value={queryResolutionText}
                         onChange={(e) => setQueryResolutionText(e.target.value)}
-                        className="w-full p-2.5 border border-slate-300 rounded-md bg-white text-xs text-slate-800 focus:ring-1 focus:ring-sky-700 focus:outline-none"
+                        className="w-full p-2.5 border border-slate-300 rounded-md bg-white text-xs text-slate-800 focus:ring-1 focus:ring-ink focus:outline-none"
                         rows={3}
                       />
                       <button
                         onClick={() => resolveInsuranceQuery(activeClaim.id, q.id, queryResolutionText)}
-                        className="px-3.5 py-1.5 bg-sky-800 hover:bg-sky-900 text-white rounded-md text-xs font-semibold cursor-pointer shadow-xs flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 bg-ink hover:bg-slate-800 text-white rounded-full text-xs font-semibold cursor-pointer shadow-xs flex items-center gap-1.5"
                       >
                         <Send className="w-3.5 h-3.5" />
                         <span>Submit Clinical Addendum & Resolve Query</span>

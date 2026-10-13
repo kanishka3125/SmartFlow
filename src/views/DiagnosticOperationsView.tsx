@@ -10,6 +10,13 @@ import {
   Cpu,
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
+import {
+  Badge,
+  HeroCard,
+  PageHeader,
+  PillButton,
+  ProgressBar,
+} from '../components/ui';
 import { DiagnosticOrder, DiagnosticEquipment } from '../types/hospital';
 
 export const DiagnosticOperationsView: React.FC = () => {
@@ -17,6 +24,12 @@ export const DiagnosticOperationsView: React.FC = () => {
   const [equipmentList, setEquipmentList] = useState<DiagnosticEquipment[]>(diagnosticEquipment);
   const [ordersList, setOrdersList] = useState<DiagnosticOrder[]>(diagnosticOrders);
   const [notification, setNotification] = useState<string | null>(null);
+
+  const totalQueue = equipmentList.reduce((s, e) => s + e.queueLength, 0);
+  const avgTurnaround = Math.round(
+    equipmentList.reduce((s, e) => s + e.avgTurnaroundMinutes, 0) / Math.max(1, equipmentList.length)
+  );
+  const urgentOpen = ordersList.filter((o) => o.isUrgent && o.status !== 'completed').length;
 
   // Rebalance workload action
   const handleRebalanceCT = () => {
@@ -38,29 +51,18 @@ export const DiagnosticOperationsView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Clinical Diagnostics & Throughput
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Diagnostic Bottleneck Balancer (Radiology & Laboratory)
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Monitors high-demand modalities (CT scanners, 3T MRI, automated chemistry analyzers).
-            Prevents acute emergency clinical bottlenecks through automated workload rebalancing.
-          </p>
-        </div>
-
-        <button
-          onClick={handleRebalanceCT}
-          className="flex items-center gap-1.5 px-4 py-2 bg-sky-800 hover:bg-sky-900 text-white rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shadow-xs"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Rebalance CT-01 / CT-02 Workload</span>
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Clinical Diagnostics & Throughput"
+        title="Diagnostics"
+        description="Monitors high-demand modalities (CT scanners, 3T MRI, automated chemistry analyzers). Prevents acute emergency clinical bottlenecks through automated workload rebalancing."
+        actions={
+          <>
+            <PillButton variant="dark" icon={<Sparkles className="w-3.5 h-3.5" />} onClick={handleRebalanceCT}>
+              Rebalance CT-01 / CT-02
+            </PillButton>
+          </>
+        }
+      />
 
       {notification && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-xs flex items-center justify-between">
@@ -74,6 +76,24 @@ export const DiagnosticOperationsView: React.FC = () => {
         </div>
       )}
 
+      <HeroCard
+        eyebrow="Diagnostic backlog"
+        value={totalQueue}
+        unit="studies queued"
+        caption={`${equipmentList.length} modalities monitored · ${urgentOpen} urgent studies still open.`}
+        status={<Badge tone={totalQueue > 15 ? 'warning' : 'ok'} className="!bg-white/10 !border-white/10 !text-white">{avgTurnaround}m avg turnaround</Badge>}
+        data={equipmentList.map((e) => ({ id: e.id, queue: e.queueLength }))}
+        xKey="id"
+        yKey="queue"
+        yLabel="Queue"
+        footer={
+          <div className="flex items-center justify-between">
+            <span>Queue length by modality</span>
+            <span className="text-white font-semibold">{equipmentList.filter((e) => e.status === 'busy').length} busy</span>
+          </div>
+        }
+      />
+
       {/* Equipment Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {equipmentList.map((eq) => {
@@ -83,9 +103,7 @@ export const DiagnosticOperationsView: React.FC = () => {
           return (
             <div
               key={eq.id}
-              className={`bg-white border rounded-lg p-4 space-y-3 transition-all ${
-                isHighQueue ? 'border-amber-200' : 'border-slate-200'
-              }`}
+              className="bg-card border border-line rounded-2xl p-4 space-y-3 shadow-2xs"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -124,14 +142,15 @@ export const DiagnosticOperationsView: React.FC = () => {
                   {Math.round((eq.currentCompletedToday / eq.dailyCapacity) * 100)}% Capacity
                 </span>
               </div>
+              <ProgressBar value={(eq.currentCompletedToday / eq.dailyCapacity) * 100} label={`${eq.name} capacity`} />
             </div>
           );
         })}
       </div>
 
       {/* Live Diagnostic Orders Table */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-card border border-line rounded-2xl overflow-hidden shadow-2xs">
+        <div className="p-4 border-b border-line flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-900">
             Active Urgent Diagnostic Study Queue ({ordersList.length} Studies)
           </h3>
@@ -140,7 +159,7 @@ export const DiagnosticOperationsView: React.FC = () => {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-line">
               <tr>
                 <th className="py-2.5 px-4">Order ID</th>
                 <th className="py-2.5 px-4">Patient Name</th>
@@ -188,7 +207,7 @@ export const DiagnosticOperationsView: React.FC = () => {
                             prev.map((o) => (o.id === ord.id ? { ...o, status: 'completed', completedAt: new Date().toISOString() } : o))
                           );
                         }}
-                        className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-md cursor-pointer shadow-2xs"
+                        className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white rounded-full cursor-pointer shadow-2xs"
                       >
                         Complete Scan
                       </button>

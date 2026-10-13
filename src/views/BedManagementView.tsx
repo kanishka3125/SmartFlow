@@ -11,8 +11,20 @@ import {
   Brush,
   X,
   Check,
+  Plus,
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
+import {
+  Badge,
+  DepartmentCard,
+  HeroCard,
+  IconButton,
+  PageHeader,
+  PillButton,
+  PillSelect,
+  StatusDot,
+  Tabs,
+} from '../components/ui';
 import { Bed, BedStatus, BedType, EquipmentTag } from '../types/hospital';
 import { recommendBedsForPatient, BedAllocationRecommendation } from '../services/bedAllocation';
 
@@ -27,6 +39,12 @@ export const BedManagementView: React.FC = () => {
     completeBedCleaning,
     setSelectedPatientId,
     role,
+    totalBeds,
+    occupiedBeds,
+    availableBeds,
+    cleaningBeds,
+    reservedBeds,
+    occupancyRate,
   } = useHospital();
 
   const [deptFilter, setDeptFilter] = useState<string>('all');
@@ -39,6 +57,23 @@ export const BedManagementView: React.FC = () => {
   const [requiredEquipment, setRequiredEquipment] = useState<EquipmentTag[]>([]);
   const [requiresIsolation, setRequiresIsolation] = useState(false);
   const [recommendations, setRecommendations] = useState<BedAllocationRecommendation[]>([]);
+
+  // Per-ward occupancy from the live bed ledger
+  const wardOccupancy = departments
+    .filter((d) => beds.some((b) => b.departmentId === d.id))
+    .map((d) => {
+      const wardBeds = beds.filter((b) => b.departmentId === d.id);
+      const inUse = wardBeds.filter((b) => ['occupied', 'reserved', 'discharge_pending'].includes(b.status)).length;
+      return {
+        id: d.id as string,
+        ward: d.shortName,
+        total: wardBeds.length,
+        inUse,
+        available: wardBeds.filter((b) => b.status === 'available').length,
+        turnover: wardBeds.filter((b) => b.status === 'awaiting_cleaning' || b.status === 'cleaning_in_progress').length,
+        occupancy: Math.round((inUse / wardBeds.length) * 100),
+      };
+    });
 
   // Filtered beds
   const filteredBeds = beds.filter((b) => {
@@ -114,101 +149,107 @@ export const BedManagementView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Inpatient Capacity & Wards
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Smart Bed Management & Allocation Engine
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Real-time ward telemetry, clinical equipment compatibility verification, and closed-loop bed turnover orchestration.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Inpatient Capacity & Wards"
+        title="Bed Management"
+        description="Real-time ward telemetry, clinical equipment compatibility verification, and closed-loop bed turnover orchestration."
+        actions={
+          <>
+            <PillSelect
+              value={deptFilter}
+              onChange={setDeptFilter}
+              label="Ward"
+              options={[
+                { value: 'all', label: 'All departments' },
+                ...departments.filter((d) => d.totalBeds > 0).map((d) => ({ value: d.id as string, label: d.name })),
+              ]}
+            />
+            <PillButton variant="dark" icon={<Sparkles className="w-3.5 h-3.5" />} onClick={() => openAllocationEngine()}>
+              Recommend & allocate
+            </PillButton>
+            <IconButton label="Recommend & allocate a bed" variant="accent" onClick={() => openAllocationEngine()}>
+              <Plus className="w-5 h-5" />
+            </IconButton>
+          </>
+        }
+      />
 
-        <button
-          onClick={() => openAllocationEngine()}
-          className="flex items-center gap-1.5 px-4 py-2 bg-sky-800 hover:bg-sky-900 text-white rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shadow-xs"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Recommend & Allocate Bed</span>
-        </button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HeroCard
+          eyebrow="Inpatient bed occupancy"
+          value={occupancyRate}
+          unit="%"
+          caption={`${occupiedBeds} occupied and ${reservedBeds} reserved or discharging across ${totalBeds} beds.`}
+          status={
+            <Badge tone={occupancyRate > 85 ? 'critical' : 'ok'} className="!bg-white/10 !border-white/10 !text-white">
+              {availableBeds} free
+            </Badge>
+          }
+          data={wardOccupancy}
+          xKey="ward"
+          yKey="occupancy"
+          yLabel="Ward occupancy %"
+          footer={
+            <div className="flex items-center justify-between">
+              <span>Occupancy by ward</span>
+              <span className="text-white font-semibold tabular-nums">{cleaningBeds} in turnover</span>
+            </div>
+          }
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
+          {wardOccupancy.map((w) => (
+            <DepartmentCard
+              key={w.id}
+              icon={<BedDouble className="w-4 h-4" />}
+              name={w.ward}
+              subtitle={`${w.available} available · ${w.turnover} turnover`}
+              percent={w.occupancy}
+              detail={`${w.inUse}/${w.total} beds`}
+              tone={w.occupancy >= 90 ? 'critical' : w.occupancy >= 80 ? 'warning' : 'ok'}
+              actions={[{ label: 'Show only this ward', onClick: () => setDeptFilter(w.id) }]}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Department Filter */}
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-slate-500 font-medium">Department:</span>
-            <select
-              value={deptFilter}
-              onChange={(e) => setDeptFilter(e.target.value)}
-              className="border border-slate-200 rounded-md px-2.5 py-1 text-xs bg-white text-slate-800 font-medium"
-            >
-              <option value="all">All Departments</option>
-              {departments.filter((d) => d.totalBeds > 0).map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-slate-500 font-medium">Status:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-slate-200 rounded-md px-2.5 py-1 text-xs bg-white text-slate-800 font-medium"
-            >
-              <option value="all">All Statuses</option>
-              <option value="available">Available</option>
-              <option value="occupied">Occupied</option>
-              <option value="discharge_pending">Discharge Pending</option>
-              <option value="awaiting_cleaning">Awaiting Cleaning</option>
-              <option value="cleaning_in_progress">Cleaning In Progress</option>
-              <option value="reserved">Reserved</option>
-            </select>
-          </div>
-
-          {/* Type Filter */}
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-slate-500 font-medium">Bed Type:</span>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="border border-slate-200 rounded-md px-2.5 py-1 text-xs bg-white text-slate-800 font-medium"
-            >
-              <option value="all">All Bed Types</option>
-              <option value="general">General</option>
-              <option value="icu">ICU</option>
-              <option value="stepdown">Stepdown</option>
-              <option value="isolation_negative_pressure">Negative Pressure Isolation</option>
-              <option value="post_op">Post-Op</option>
-            </select>
-          </div>
+          <Tabs
+            size="sm"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            items={[
+              { id: 'all', label: 'All statuses' },
+              { id: 'available', label: 'Available' },
+              { id: 'occupied', label: 'Occupied' },
+              { id: 'discharge_pending', label: 'Discharge pending' },
+              { id: 'awaiting_cleaning', label: 'Awaiting cleaning' },
+              { id: 'cleaning_in_progress', label: 'Cleaning' },
+              { id: 'reserved', label: 'Reserved' },
+            ]}
+          />
+          <PillSelect
+            variant="light"
+            value={typeFilter}
+            onChange={setTypeFilter}
+            label="Type"
+            options={[
+              { value: 'all', label: 'All bed types' },
+              { value: 'general', label: 'General' },
+              { value: 'icu', label: 'ICU' },
+              { value: 'stepdown', label: 'Stepdown' },
+              { value: 'isolation_negative_pressure', label: 'Negative pressure isolation' },
+              { value: 'post_op', label: 'Post-op' },
+            ]}
+          />
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-3 text-[11px] text-slate-500">
-          <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-xs bg-emerald-600 inline-block" />
-            <span>Available</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-xs bg-slate-700 inline-block" />
-            <span>Occupied</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-xs bg-amber-500 inline-block" />
-            <span>Discharge Pending</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-xs bg-sky-500 inline-block" />
-            <span>Cleaning Turnover</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-ink-2">
+          <span className="flex items-center gap-1.5"><StatusDot tone="ok" />Available</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-ink inline-block" />Occupied</span>
+          <span className="flex items-center gap-1.5"><StatusDot tone="warning" />Discharge pending</span>
+          <span className="flex items-center gap-1.5"><StatusDot tone="info" />Cleaning turnover</span>
         </div>
       </div>
 
@@ -225,15 +266,7 @@ export const BedManagementView: React.FC = () => {
           return (
             <div
               key={bed.id}
-              className={`bg-white border rounded-lg p-3.5 flex flex-col justify-between transition-all ${
-                isAvailable
-                  ? 'border-emerald-200 hover:border-emerald-300 shadow-2xs'
-                  : isDischargePending
-                  ? 'border-amber-200 hover:border-amber-300'
-                  : isAwaitingCleaning || isCleaningInProgress
-                  ? 'border-sky-200 hover:border-sky-300'
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
+              className="bg-card border border-line hover:border-slate-300 rounded-2xl p-4 flex flex-col justify-between transition-colors shadow-2xs"
             >
               <div>
                 {/* Bed ID & Status Indicator */}
@@ -242,15 +275,15 @@ export const BedManagementView: React.FC = () => {
                   <span
                     className={`w-2 h-2 rounded-full ${
                       isAvailable
-                        ? 'bg-emerald-600'
+                        ? 'bg-emerald-500'
                         : isOccupied
-                        ? 'bg-slate-700'
+                        ? 'bg-ink'
                         : isDischargePending
                         ? 'bg-amber-500'
                         : isCleaningInProgress
-                        ? 'bg-sky-500'
+                        ? 'bg-accent'
                         : isAwaitingCleaning
-                        ? 'bg-orange-400'
+                        ? 'bg-accent-pink'
                         : 'bg-slate-300'
                     }`}
                   />
@@ -264,7 +297,7 @@ export const BedManagementView: React.FC = () => {
                 <div className="mt-2 text-[10px] text-slate-600 font-medium">
                   <span className="capitalize">{bed.type.replace(/_/g, ' ')}</span>
                   {bed.isolation && (
-                    <span className="ml-1 text-purple-700 font-semibold bg-purple-50 px-1 py-0.2 rounded-xs border border-purple-200">
+                    <span className="ml-1 text-sky-800 font-semibold bg-sky-50 px-1.5 py-px rounded-full border border-sky-200">
                       ISO
                     </span>
                   )}
@@ -307,7 +340,7 @@ export const BedManagementView: React.FC = () => {
                 {isAwaitingCleaning && (
                   <button
                     onClick={() => startBedCleaning(bed.id, 'EVS Specialist ' + (role === 'admin' ? 'Admin Dispatched' : 'Staff'))}
-                    className="w-full text-center text-[10px] font-semibold bg-sky-700 hover:bg-sky-800 text-white py-1 rounded-sm cursor-pointer shadow-2xs"
+                    className="w-full text-center text-[11px] font-semibold bg-ink hover:bg-slate-800 text-white py-1.5 rounded-full cursor-pointer"
                   >
                     Dispatch EVS
                   </button>
@@ -316,7 +349,7 @@ export const BedManagementView: React.FC = () => {
                 {isCleaningInProgress && (
                   <button
                     onClick={() => completeBedCleaning(bed.id)}
-                    className="w-full text-center text-[10px] font-semibold bg-emerald-700 hover:bg-emerald-800 text-white py-1 rounded-sm cursor-pointer shadow-2xs"
+                    className="w-full text-center text-[11px] font-semibold bg-ink hover:bg-slate-800 text-white py-1.5 rounded-full cursor-pointer"
                   >
                     Verify Ready
                   </button>
@@ -325,7 +358,7 @@ export const BedManagementView: React.FC = () => {
                 {isAvailable && (
                   <button
                     onClick={() => openAllocationEngine()}
-                    className="w-full text-center text-[10px] font-semibold bg-slate-900 hover:bg-slate-800 text-white py-1 rounded-sm cursor-pointer"
+                    className="w-full text-center text-[11px] font-semibold bg-ink hover:bg-slate-800 text-white py-1.5 rounded-full cursor-pointer"
                   >
                     Assign
                   </button>
@@ -350,12 +383,14 @@ export const BedManagementView: React.FC = () => {
 
       {/* Bed Allocation Recommendation Modal */}
       {isAllocationModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-lg shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs p-4">
+          <div className="bg-card rounded-2xl shadow-2xl border border-line w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-sky-700" />
+            <div className="p-5 border-b border-line flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-full accent-gradient flex items-center justify-center text-ink shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </span>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
                     Smart Bed Allocation Recommendation Engine
@@ -365,12 +400,9 @@ export const BedManagementView: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setIsAllocationModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <IconButton label="Close" size="sm" onClick={() => setIsAllocationModalOpen(false)}>
+                <X className="w-4 h-4" />
+              </IconButton>
             </div>
 
             {/* Modal Body */}
@@ -448,7 +480,7 @@ export const BedManagementView: React.FC = () => {
                   recommendations.map((rec) => (
                     <div
                       key={rec.bed.id}
-                      className="p-3.5 bg-slate-50/70 border border-slate-200 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+                      className="p-4 bg-canvas border border-line rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -476,7 +508,7 @@ export const BedManagementView: React.FC = () => {
 
                       <button
                         onClick={() => handleConfirmAllocation(rec.bed.id)}
-                        className="px-3.5 py-1.5 bg-sky-800 hover:bg-sky-900 text-white rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
+                        className="px-3.5 py-1.5 bg-ink hover:bg-slate-800 text-white rounded-full text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-2xs"
                       >
                         Confirm Allocation
                       </button>
@@ -487,13 +519,8 @@ export const BedManagementView: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
-              <button
-                onClick={() => setIsAllocationModalOpen(false)}
-                className="px-4 py-1.5 text-xs text-slate-600 hover:text-slate-900 cursor-pointer"
-              >
-                Cancel
-              </button>
+            <div className="p-4 border-t border-line flex justify-end">
+              <PillButton onClick={() => setIsAllocationModalOpen(false)}>Cancel</PillButton>
             </div>
           </div>
         </div>

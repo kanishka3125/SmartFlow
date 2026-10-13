@@ -10,7 +10,13 @@ import {
   Users,
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
-import { NavTabId } from '../components/Sidebar';
+import {
+  Badge,
+  HeroCard,
+  PageHeader,
+  PillButton,
+} from '../components/ui';
+import { NavTabId } from '../components/navigation';
 
 interface BottleneckAnalysisViewProps {
   setActiveTab: (tab: NavTabId) => void;
@@ -18,32 +24,39 @@ interface BottleneckAnalysisViewProps {
 
 export const BottleneckAnalysisView: React.FC<BottleneckAnalysisViewProps> = ({ setActiveTab }) => {
   const { bottlenecks, role } = useHospital();
+  const criticalCount = bottlenecks.filter((b) => b.severity === 'critical').length;
 
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Flow Diagnostic Engine
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Operational Bottleneck Detection & Root Cause Analysis
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Continuously monitors queue velocity, service durations, resource contention, and administrative handoffs.
-            Detects emerging bottlenecks before they result in ambulance diversions or hallway boarding.
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Flow Diagnostic Engine"
+        title="Bottlenecks"
+        description="Continuously monitors queue velocity, service durations, resource contention, and administrative handoffs. Detects emerging bottlenecks before they result in ambulance diversions or hallway boarding."
+        actions={
+          <>
+            <PillButton variant="dark" icon={<Sparkles className="w-3.5 h-3.5" />} onClick={() => setActiveTab('autopilot')}>
+              Launch Autopilot
+            </PillButton>
+          </>
+        }
+      />
 
-        <button
-          onClick={() => setActiveTab('autopilot')}
-          className="flex items-center gap-1.5 px-4 py-2 bg-sky-800 hover:bg-sky-900 text-white rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shadow-xs"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Launch Autopilot Intervention</span>
-        </button>
-      </div>
+      <HeroCard
+        eyebrow="Active bottlenecks"
+        value={bottlenecks.length}
+        unit="detected"
+        caption="Queue velocity, service duration, resource contention and handoff delays monitored continuously."
+        status={<Badge tone={criticalCount > 0 ? 'critical' : 'ok'} className="!bg-white/10 !border-white/10 !text-white">{criticalCount} critical</Badge>}
+      >
+        <div className="flex flex-wrap gap-2 mt-6">
+          {bottlenecks.map((bn) => (
+            <span key={bn.id} className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1 text-[11px] text-white/80">
+              <span className={`w-1.5 h-1.5 rounded-full ${bn.severity === 'critical' ? 'bg-rose-500' : bn.severity === 'warning' ? 'bg-amber-500' : 'bg-accent'}`} />
+              {bn.location}
+            </span>
+          ))}
+        </div>
+      </HeroCard>
 
       {/* Bottlenecks Cards */}
       <div className="space-y-4">
@@ -54,9 +67,7 @@ export const BottleneckAnalysisView: React.FC<BottleneckAnalysisViewProps> = ({ 
           return (
             <div
               key={bn.id}
-              className={`bg-white border rounded-lg p-5 shadow-2xs transition-all ${
-                isCritical ? 'border-rose-200' : isWarning ? 'border-amber-200' : 'border-slate-200'
-              }`}
+              className="bg-card border border-line rounded-2xl p-5 shadow-2xs"
             >
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div className="space-y-2 flex-1">
@@ -125,7 +136,7 @@ export const BottleneckAnalysisView: React.FC<BottleneckAnalysisViewProps> = ({ 
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-200 flex justify-end">
+                  <div className="mt-4 pt-3 border-t border-line flex justify-end">
                     <button
                       onClick={() => {
                         if (bn.departmentId === 'MED' && bn.title.includes('Pharmacy')) {
@@ -138,7 +149,7 @@ export const BottleneckAnalysisView: React.FC<BottleneckAnalysisViewProps> = ({ 
                           setActiveTab('bed-management');
                         }
                       }}
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-semibold transition-colors cursor-pointer"
                     >
                       <span>Take Action</span>
                       <ArrowRight className="w-3.5 h-3.5" />

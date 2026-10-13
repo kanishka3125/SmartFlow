@@ -13,7 +13,15 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
-import { NavTabId } from '../components/Sidebar';
+import {
+  Badge,
+  Card,
+  CardHeader,
+  HeroCard,
+  PageHeader,
+  ProgressBar,
+} from '../components/ui';
+import { NavTabId } from '../components/navigation';
 
 interface AutopilotViewProps {
   setActiveTab: (tab: NavTabId) => void;
@@ -47,28 +55,16 @@ export const AutopilotView: React.FC<AutopilotViewProps> = ({ setActiveTab }) =>
 
   return (
     <div className="space-y-6">
-      {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="text-xs font-semibold text-sky-800 uppercase tracking-wider mb-1">
-            Systemwide Optimization Engine
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-            Hospital Flow Autopilot — Coordinated Operational Action Engine
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Synthesizes arrival forecasts, emergency queues, diagnostic queues, and discharge blockers to generate
-            evidence-grounded operational action plans for administrative review and approval.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Autonomous Safety Rule:</span>
-          <span className="text-xs font-semibold text-sky-800 bg-sky-50 px-2.5 py-1 rounded-md border border-sky-200">
-            Human Approval Mandatory
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Systemwide Optimization Engine"
+        title="Flow Autopilot"
+        description="Synthesizes arrival forecasts, emergency queues, diagnostic queues, and discharge blockers to generate evidence-grounded operational action plans for administrative review and approval."
+        actions={
+          <>
+            <Badge tone="info">Human approval mandatory</Badge>
+          </>
+        }
+      />
 
       {/* Notification Toast */}
       {notification && (
@@ -83,11 +79,43 @@ export const AutopilotView: React.FC<AutopilotViewProps> = ({ setActiveTab }) =>
         </div>
       )}
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <HeroCard
+          eyebrow="ED boarding pressure"
+          value={edBoardingCount}
+          unit="patients boarding"
+          caption={`Hospital occupancy is at ${occupancyRate}%. The plan below coordinates pharmacy, insurance and EVS to free inpatient beds.`}
+          status={
+            <Badge tone={plan?.isExecuted ? 'ok' : 'critical'} className="!bg-white/10 !border-white/10 !text-white">
+              {plan?.isExecuted ? 'Plan executed' : plan?.isApproved ? 'Approved' : 'Awaiting approval'}
+            </Badge>
+          }
+        >
+          {plan && (
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-white/60">
+                <span>Interventions ready</span>
+                <span className="text-white font-semibold tabular-nums">
+                  {plan.isExecuted ? plan.recommendedActions.length : 0}/{plan.recommendedActions.length} executed
+                </span>
+              </div>
+              <ProgressBar tone="accent" value={plan.isExecuted ? 100 : plan.isApproved ? 50 : 0} label="Plan progress" />
+            </div>
+          )}
+        </HeroCard>
+        {plan && (
+          <Card>
+            <CardHeader title="Projected operational impact" subtitle="Expected outcome once the plan is executed" />
+            <p className="text-sm text-ink leading-relaxed">{plan.expectedImpact}</p>
+          </Card>
+        )}
+      </div>
+
       {/* Active Autopilot Plan Showcase */}
       {plan && (
-        <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-6 shadow-xs">
+        <div className="bg-card border border-line rounded-2xl p-6 space-y-6 shadow-2xs">
           {/* Plan Header */}
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-5 border-b border-slate-200">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-5 border-b border-line">
             <div className="space-y-1.5 flex-1">
               <div className="flex items-center gap-2.5">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-sm bg-rose-50 text-rose-700 border border-rose-200 uppercase">
@@ -119,7 +147,7 @@ export const AutopilotView: React.FC<AutopilotViewProps> = ({ setActiveTab }) =>
               ) : plan.isApproved ? (
                 <button
                   onClick={() => handleExecute(plan.id)}
-                  className="flex items-center gap-1.5 px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md text-xs font-bold transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-full text-xs font-bold transition-colors cursor-pointer shadow-xs whitespace-nowrap"
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Execute Coordinated Plan Now</span>
@@ -127,7 +155,7 @@ export const AutopilotView: React.FC<AutopilotViewProps> = ({ setActiveTab }) =>
               ) : (
                 <button
                   onClick={() => handleApprove(plan.id)}
-                  className="flex items-center gap-1.5 px-5 py-2.5 bg-sky-800 hover:bg-sky-900 text-white rounded-md text-xs font-bold transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-5 py-2.5 bg-ink hover:bg-slate-800 text-white rounded-full text-xs font-bold transition-colors cursor-pointer shadow-xs whitespace-nowrap"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>Approve Action Plan as Administrator</span>
@@ -163,7 +191,7 @@ export const AutopilotView: React.FC<AutopilotViewProps> = ({ setActiveTab }) =>
               {plan.recommendedActions.map((action, i) => (
                 <div key={action.id} className="p-3.5 bg-white flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-full bg-sky-100 text-sky-800 font-bold flex items-center justify-center text-xs shrink-0 font-mono">
+                    <span className="w-6 h-6 rounded-full bg-ink text-white font-semibold flex items-center justify-center text-xs shrink-0 font-mono">
                       {i + 1}
                     </span>
                     <div>
@@ -189,14 +217,7 @@ export const AutopilotView: React.FC<AutopilotViewProps> = ({ setActiveTab }) =>
           </div>
 
           {/* Expected Impact Callout */}
-          <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-lg text-xs space-y-1">
-            <div className="font-bold text-sky-900 uppercase tracking-wider text-[11px]">
-              Projected Operational Impact & Outcome
-            </div>
-            <p className="text-sky-950 font-medium leading-relaxed">
-              {plan.expectedImpact}
-            </p>
-          </div>
+
         </div>
       )}
     </div>
