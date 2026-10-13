@@ -70,6 +70,67 @@
   --shadow-2xl: 0 24px 48px rgb(0 0 0 / 0.12);
 }
 
+/* Light Mode Overrides (Warm Off-White) */
+html.light,
+[data-theme='light'] {
+  --color-page: #eeedea;
+  --color-canvas: #f4f3f0;
+  --color-card: #fafaf8;
+  --color-line: #e6e4df;
+  --color-hero: #151515;
+
+  --color-ink: #111111;
+  --color-ink-2: #6b6b6b;
+  --color-ink-3: #9a9a9a;
+
+  --color-white: #fafaf8;
+
+  --color-slate-50: #f4f3f0;
+  --color-slate-100: #eeedea;
+  --color-slate-200: #e6e4df;
+  --color-slate-300: #d6d3cc;
+  --color-slate-400: #9a9a9a;
+  --color-slate-500: #6b6b6b;
+  --color-slate-600: #55534f;
+  --color-slate-700: #3d3b38;
+  --color-slate-800: #262523;
+  --color-slate-900: #111111;
+  --color-slate-950: #0a0a0a;
+}
+
+/* Dark Mode Overrides (Midnight Obsidian & Purple) */
+html.dark,
+[data-theme='dark'] {
+  --color-page: #0c0817;
+  --color-canvas: #120d22;
+  --color-card: #18112c;
+  --color-line: #2d1f4a;
+  --color-hero: #07040e;
+
+  --color-ink: #f8f7ff;
+  --color-ink-2: #c4b5fd;
+  --color-ink-3: #8e7bb8;
+
+  --color-white: #ffffff;
+
+  --color-slate-50: #120d22;
+  --color-slate-100: #18112c;
+  --color-slate-200: #261742;
+  --color-slate-300: #38245e;
+  --color-slate-400: #7b659f;
+  --color-slate-500: #a28ec4;
+  --color-slate-600: #c4b5fd;
+  --color-slate-700: #ddd6fe;
+  --color-slate-800: #ede9fe;
+  --color-slate-900: #f5f3ff;
+  --color-slate-950: #ffffff;
+}
+
+html.dark .bg-white,
+[data-theme='dark'] .bg-white {
+  background-color: var(--color-card);
+}
+
 @layer base {
   body {
     font-family: var(--font-sans);

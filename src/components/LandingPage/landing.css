@@ -1,0 +1,697 @@
+/* 
+ * SYNESIS Landing Page Stylesheet
+ * Scoped styling for the deep dark purple healthcare technology theme
+ */
+
+:root {
+  --synesis-bg: #090514;
+  --synesis-bg-alt: #0e0720;
+  --synesis-accent: #7c3aed;
+  --synesis-lavender: #c4b5fd;
+  --synesis-purple-deep: #5b21b6;
+  --synesis-glass-border: rgba(167, 139, 250, 0.16);
+  --synesis-glass-bg: rgba(16, 9, 32, 0.75);
+}
+
+.synesis-landing-root {
+  background-color: #090514;
+  color: #f5f3ff;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Background atmospheric gradient orbs */
+.synesis-orb-top {
+  position: absolute;
+  top: -150px;
+  right: -100px;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.22) 0%, rgba(91, 33, 182, 0.10) 45%, transparent 70%);
+  filter: blur(85px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.synesis-orb-left {
+  position: absolute;
+  top: 30%;
+  left: -200px;
+  width: 650px;
+  height: 650px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(109, 40, 217, 0.18) 0%, rgba(67, 24, 134, 0.08) 50%, transparent 70%);
+  filter: blur(95px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.synesis-orb-bottom {
+  position: absolute;
+  bottom: 0;
+  right: 10%;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.14) 0%, rgba(76, 29, 149, 0.08) 50%, transparent 70%);
+  filter: blur(85px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Subtle grid overlay */
+.synesis-grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(167, 139, 250, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(167, 139, 250, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(circle at 50% 30%, black 40%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at 50% 30%, black 40%, transparent 85%);
+}
+
+/* Glassmorphism utility */
+.synesis-glass-card {
+  background: rgba(16, 9, 32, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(167, 139, 250, 0.16);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+}
+
+.synesis-glass-card:hover {
+  border-color: rgba(167, 139, 250, 0.32);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), 0 0 25px rgba(124, 58, 237, 0.2);
+}
+
+/* =========================================================
+   3D MEDICAL CUBE ENGINE (DEEP PURPLE AESTHETICS)
+   ========================================================= */
+
+.cube-scene {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+  perspective-origin: 50% 45%;
+  user-select: none;
+}
+
+/* Floating animation wrapper */
+.cube-float-wrapper {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  transform-style: preserve-3d;
+  animation: cube-float-bob 6s ease-in-out infinite;
+}
+
+@keyframes cube-float-bob {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
+/* 3D Assembly */
+.cube-assembly {
+  position: absolute;
+  inset: 0;
+  width: 240px;
+  height: 240px;
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease-out;
+}
+
+/* Cube faces (240px x 240px, translateZ = 120px) */
+.cube-face {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  backface-visibility: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  
+  /* Almost black obsidian dark glass with subtle purple undertone */
+  background: linear-gradient(
+    145deg,
+    rgba(14, 10, 24, 0.95) 0%,
+    rgba(5, 3, 10, 0.98) 52%,
+    rgba(18, 11, 30, 0.94) 100%
+  );
+  border: 1.5px solid rgba(167, 139, 250, 0.55);
+  box-shadow: 
+    inset 0 0 14px rgba(124, 58, 237, 0.08),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2),
+    0 0 8px rgba(124, 58, 237, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Front Face */
+.cube-face-front {
+  transform: rotateY(0deg) translateZ(120px);
+  background: linear-gradient(
+    145deg,
+    rgba(16, 11, 28, 0.95) 0%,
+    rgba(4, 2, 8, 0.98) 55%,
+    rgba(20, 12, 34, 0.93) 100%
+  );
+  border-color: rgba(167, 139, 250, 0.65);
+}
+
+/* Back Face */
+.cube-face-back {
+  transform: rotateY(180deg) translateZ(120px);
+  background: linear-gradient(
+    145deg,
+    rgba(8, 4, 16, 0.97) 0%,
+    rgba(3, 1, 7, 0.99) 100%
+  );
+  border-color: rgba(139, 92, 246, 0.35);
+}
+
+/* Right Face */
+.cube-face-right {
+  transform: rotateY(90deg) translateZ(120px);
+  background: linear-gradient(
+    145deg,
+    rgba(12, 8, 22, 0.96) 0%,
+    rgba(4, 2, 8, 0.98) 100%
+  );
+  border-color: rgba(167, 139, 250, 0.55);
+}
+
+/* Left Face */
+.cube-face-left {
+  transform: rotateY(-90deg) translateZ(120px);
+  background: linear-gradient(
+    145deg,
+    rgba(12, 8, 22, 0.96) 0%,
+    rgba(4, 2, 8, 0.98) 100%
+  );
+  border-color: rgba(167, 139, 250, 0.55);
+}
+
+/* Top Face with subtle smoked glass specular highlight */
+.cube-face-top {
+  transform: rotateX(90deg) translateZ(120px);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(24, 15, 40, 0.94) 35%,
+    rgba(6, 3, 12, 0.98) 100%
+  );
+  border-color: rgba(196, 181, 253, 0.7);
+  box-shadow: 
+    inset 0 0 30px rgba(139, 92, 246, 0.22),
+    0 0 20px rgba(167, 139, 250, 0.25);
+}
+
+/* Bottom Face */
+.cube-face-bottom {
+  transform: rotateX(-90deg) translateZ(120px);
+  background: linear-gradient(
+    145deg,
+    rgba(5, 2, 10, 0.98) 0%,
+    rgba(14, 8, 26, 0.95) 100%
+  );
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+/* Volumetric Inner Core (Subtle and minimal) */
+.cube-inner-core {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  left: 90px;
+  top: 90px;
+  border-radius: 50%;
+  transform: translateZ(0);
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(167, 139, 250, 0.15) 45%,
+    transparent 70%
+  );
+  filter: blur(8px);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* Refined Medical + Symbol with tight, clean, non-blooming glow */
+.medical-plus {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.3));
+}
+
+.medical-plus-bar {
+  position: absolute;
+  border-radius: 8px;
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #f5f3ff 35%,
+    #e0e7ff 70%,
+    #c4b5fd 100%
+  );
+  box-shadow: 
+    0 0 6px rgba(255, 255, 255, 0.65),
+    0 0 10px rgba(139, 92, 246, 0.22),
+    inset 0 0 3px rgba(255, 255, 255, 0.85);
+}
+
+.medical-plus-vertical {
+  width: 30px;
+  height: 104px;
+}
+
+.medical-plus-horizontal {
+  width: 104px;
+  height: 30px;
+}
+
+/* Holographic Ring under the cube */
+.holographic-system {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  left: calc(50% - 170px);
+  bottom: 10px;
+  transform-style: preserve-3d;
+  transform: rotateX(78deg) translateZ(-130px);
+  pointer-events: none;
+}
+
+.holographic-ring-outer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px dashed rgba(167, 139, 250, 0.45);
+  box-shadow: 
+    0 0 30px rgba(109, 40, 217, 0.5),
+    inset 0 0 30px rgba(91, 33, 182, 0.35);
+  animation: holo-spin-reverse 20s linear infinite;
+}
+
+.holographic-ring-inner {
+  position: absolute;
+  inset: 38px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(139, 92, 246, 0.55);
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.45);
+  animation: holo-spin 14s linear infinite;
+}
+
+.holographic-disc-glow {
+  position: absolute;
+  inset: 15px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(124, 58, 237, 0.4) 0%,
+    rgba(91, 33, 182, 0.18) 45%,
+    transparent 70%
+  );
+  filter: blur(14px);
+}
+
+@keyframes holo-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes holo-spin-reverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Realistic Ground Shadow */
+.cube-ground-shadow {
+  position: absolute;
+  width: 220px;
+  height: 70px;
+  left: calc(50% - 110px);
+  bottom: 25px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(5, 2, 12, 0.92) 0%,
+    rgba(109, 40, 217, 0.22) 45%,
+    transparent 75%
+  );
+  filter: blur(10px);
+  pointer-events: none;
+  animation: shadow-scale 6s ease-in-out infinite;
+}
+
+@keyframes shadow-scale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(0.85);
+    opacity: 0.5;
+  }
+}
+
+/* Floating Glass Panels (Hovering near cube) */
+.floating-telemetry-badge {
+  position: absolute;
+  z-index: 20;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(14, 8, 28, 0.85);
+  border: 1px solid rgba(167, 139, 250, 0.32);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55), 0 0 18px rgba(109, 40, 217, 0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.floating-telemetry-badge:hover {
+  border-color: rgba(167, 139, 250, 0.65);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 25px rgba(124, 58, 237, 0.4);
+}
+
+.floating-badge-top-left {
+  top: 35px;
+  left: -20px;
+  animation: badge-float-1 5s ease-in-out infinite;
+}
+
+.floating-badge-bottom-right {
+  bottom: 50px;
+  right: -25px;
+  animation: badge-float-2 6s ease-in-out infinite 0.5s;
+}
+
+@keyframes badge-float-1 {
+  0%, 100% {
+    transform: translateY(0px) translateZ(60px);
+  }
+  50% {
+    transform: translateY(-10px) translateZ(60px);
+  }
+}
+
+@keyframes badge-float-2 {
+  0%, 100% {
+    transform: translateY(0px) translateZ(60px);
+  }
+  50% {
+    transform: translateY(12px) translateZ(60px);
+  }
+}
+
+/* Interactive Control Toolbar for 3D Cube */
+.cube-controls-bar {
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 9, 32, 0.9);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  padding: 6px 12px;
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+  z-index: 25;
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .cube-float-wrapper,
+  .cube-inner-core,
+  .holographic-ring-outer,
+  .holographic-ring-inner,
+  .cube-ground-shadow,
+  .floating-badge-top-left,
+  .floating-badge-bottom-right {
+    animation: none !important;
+  }
+}
+
+/* =========================================================
+   LIGHT THEME ADAPTATION
+   ========================================================= */
+
+html.light .synesis-landing-root,
+[data-theme='light'] .synesis-landing-root {
+  background-color: #f8f6fc;
+  color: #170d2c;
+}
+
+html.light .synesis-grid-pattern,
+[data-theme='light'] .synesis-grid-pattern {
+  background-image: 
+    linear-gradient(to right, rgba(124, 58, 237, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(124, 58, 237, 0.05) 1px, transparent 1px);
+}
+
+html.light .synesis-orb-top,
+[data-theme='light'] .synesis-orb-top {
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, rgba(196, 181, 253, 0.06) 45%, transparent 70%);
+}
+
+html.light .synesis-orb-left,
+[data-theme='light'] .synesis-orb-left {
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, rgba(167, 139, 250, 0.04) 50%, transparent 70%);
+}
+
+html.light .synesis-landing-root header,
+[data-theme='light'] .synesis-landing-root header {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-bottom-color: rgba(139, 92, 246, 0.18) !important;
+}
+
+html.light .synesis-landing-root header nav button,
+html.light .synesis-landing-root header nav a,
+[data-theme='light'] .synesis-landing-root header nav button,
+[data-theme='light'] .synesis-landing-root header nav a {
+  color: #554473 !important;
+}
+
+html.light .synesis-landing-root header nav button:hover,
+html.light .synesis-landing-root header nav a:hover,
+[data-theme='light'] .synesis-landing-root header nav button:hover,
+[data-theme='light'] .synesis-landing-root header nav a:hover {
+  color: #7c3aed !important;
+}
+
+html.light .synesis-landing-root h1,
+[data-theme='light'] .synesis-landing-root h1 {
+  color: #150a2b !important;
+}
+
+html.light .synesis-landing-root h2,
+[data-theme='light'] .synesis-landing-root h2 {
+  color: #150a2b !important;
+}
+
+html.light .synesis-landing-root h3,
+[data-theme='light'] .synesis-landing-root h3 {
+  color: #150a2b !important;
+}
+
+html.light .synesis-landing-root p,
+[data-theme='light'] .synesis-landing-root p {
+  color: #4b3c66 !important;
+}
+
+/* Glass cards in Light Mode */
+html.light .synesis-glass-card,
+[data-theme='light'] .synesis-glass-card {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border-color: rgba(139, 92, 246, 0.22) !important;
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.07), 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+}
+
+html.light .synesis-glass-card:hover,
+[data-theme='light'] .synesis-glass-card:hover {
+  border-color: rgba(124, 58, 237, 0.45) !important;
+  box-shadow: 0 16px 36px rgba(124, 58, 237, 0.12), 0 0 20px rgba(139, 92, 246, 0.1) !important;
+}
+
+html.light .synesis-glass-card .text-white,
+[data-theme='light'] .synesis-glass-card .text-white {
+  color: #150a2b !important;
+}
+
+html.light #synesis-telemetry,
+[data-theme='light'] #synesis-telemetry {
+  background-color: rgba(242, 237, 252, 0.82) !important;
+  border-color: rgba(139, 92, 246, 0.16) !important;
+}
+
+html.light #synesis-architecture,
+[data-theme='light'] #synesis-architecture {
+  background-color: rgba(245, 241, 253, 0.75) !important;
+  border-color: rgba(139, 92, 246, 0.16) !important;
+}
+
+html.light .synesis-landing-root footer,
+[data-theme='light'] .synesis-landing-root footer {
+  background-color: #ede7f7 !important;
+  border-color: rgba(139, 92, 246, 0.16) !important;
+  color: #554473 !important;
+}
+
+/* Light Theme 3D Cube (Frosted crystal acrylic) */
+html.light .cube-face,
+[data-theme='light'] .cube-face {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(246, 242, 255, 0.96) 52%,
+    rgba(255, 255, 255, 0.92) 100%
+  ) !important;
+  border: 1.5px solid rgba(139, 92, 246, 0.45) !important;
+  box-shadow: 
+    inset 0 0 14px rgba(139, 92, 246, 0.12),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95),
+    0 0 12px rgba(139, 92, 246, 0.14) !important;
+}
+
+html.light .cube-face-front,
+[data-theme='light'] .cube-face-front {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(247, 244, 255, 0.98) 55%,
+    rgba(255, 255, 255, 0.93) 100%
+  ) !important;
+  border-color: rgba(124, 58, 237, 0.5) !important;
+}
+
+html.light .cube-face-top,
+[data-theme='light'] .cube-face-top {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(240, 234, 252, 0.94) 40%,
+    rgba(255, 255, 255, 0.92) 100%
+  ) !important;
+  border-color: rgba(167, 139, 250, 0.6) !important;
+}
+
+html.light .floating-telemetry-badge,
+[data-theme='light'] .floating-telemetry-badge {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(139, 92, 246, 0.35) !important;
+  box-shadow: 0 10px 25px rgba(124, 58, 237, 0.12) !important;
+}
+
+html.light .floating-telemetry-badge .text-white,
+[data-theme='light'] .floating-telemetry-badge .text-white {
+  color: #150a2b !important;
+}
+
+html.light .cube-controls-bar,
+[data-theme='light'] .cube-controls-bar {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(139, 92, 246, 0.25) !important;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.1) !important;
+}
+
+html.light .cube-controls-bar button,
+[data-theme='light'] .cube-controls-bar button {
+  color: #4c1d95 !important;
+}
+
+/* =========================================================
+   CRISP WHITE TYPOGRAPHY OVERRIDES (High Contrast)
+   ========================================================= */
+.synesis-landing-root {
+  color: #ffffff;
+}
+
+.synesis-landing-root .text-white,
+.synesis-landing-root h1,
+.synesis-landing-root h2,
+.synesis-landing-root h3 {
+  color: #ffffff !important;
+}
+
+/* Lighten purple/violet text elements to white */
+.synesis-landing-root .text-violet-200,
+.synesis-landing-root .text-violet-200\/80,
+.synesis-landing-root .text-violet-300,
+.synesis-landing-root .text-violet-300\/60,
+.synesis-landing-root .text-violet-300\/70,
+.synesis-landing-root .text-violet-300\/80,
+.synesis-landing-root .text-violet-300\/90,
+.synesis-landing-root .text-violet-400,
+.synesis-landing-root .text-purple-300,
+.synesis-landing-root .text-purple-400,
+.synesis-landing-root .text-indigo-400 {
+  color: #ffffff !important;
+}
+
+/* Light mode overrides for typography */
+html.light .synesis-landing-root,
+[data-theme='light'] .synesis-landing-root {
+  color: #170d2c;
+}
+
+html.light .synesis-landing-root .text-white,
+[data-theme='light'] .synesis-landing-root .text-white,
+html.light .synesis-landing-root h1,
+[data-theme='light'] .synesis-landing-root h1,
+html.light .synesis-landing-root h2,
+[data-theme='light'] .synesis-landing-root h2,
+html.light .synesis-landing-root h3,
+[data-theme='light'] .synesis-landing-root h3 {
+  color: #150a2b !important;
+}
+
+html.light .synesis-landing-root .text-violet-200,
+html.light .synesis-landing-root .text-violet-200\/80,
+html.light .synesis-landing-root .text-violet-300,
+html.light .synesis-landing-root .text-violet-300\/60,
+html.light .synesis-landing-root .text-violet-300\/70,
+html.light .synesis-landing-root .text-violet-300\/80,
+html.light .synesis-landing-root .text-violet-300\/90,
+html.light .synesis-landing-root .text-violet-400,
+html.light .synesis-landing-root .text-purple-300,
+html.light .synesis-landing-root .text-purple-400,
+html.light .synesis-landing-root .text-indigo-400,
+[data-theme='light'] .synesis-landing-root .text-violet-200,
+[data-theme='light'] .synesis-landing-root .text-violet-200\/80,
+[data-theme='light'] .synesis-landing-root .text-violet-300,
+[data-theme='light'] .synesis-landing-root .text-violet-300\/60,
+[data-theme='light'] .synesis-landing-root .text-violet-300\/70,
+[data-theme='light'] .synesis-landing-root .text-violet-300\/80,
+[data-theme='light'] .synesis-landing-root .text-violet-300\/90,
+[data-theme='light'] .synesis-landing-root .text-violet-400,
+[data-theme='light'] .synesis-landing-root .text-purple-300,
+[data-theme='light'] .synesis-landing-root .text-purple-400,
+[data-theme='light'] .synesis-landing-root .text-indigo-400 {
+  color: #4b3c66 !important;
+}

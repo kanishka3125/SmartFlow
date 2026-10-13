@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bell, ChevronDown, RotateCcw, Sparkles } from 'lucide-react';
+import { Bell, ChevronDown, RotateCcw, Sparkles, Sun, Moon } from 'lucide-react';
 import { useHospital } from '../context/HospitalContext';
+import { useTheme } from '../context/ThemeContext';
 import { navItems, NavTabId } from './navigation';
 import { IconButton } from './ui';
 
@@ -8,10 +9,17 @@ interface TopBarProps {
   activeTab: NavTabId;
   setActiveTab: (tab: NavTabId) => void;
   onOpenAskDrawer: () => void;
+  onReturnToLanding?: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, onOpenAskDrawer }) => {
+export const TopBar: React.FC<TopBarProps> = ({
+  activeTab,
+  setActiveTab,
+  onOpenAskDrawer,
+  onReturnToLanding,
+}) => {
   const { role, setRole, resetDemoData, activeAlertsCount, edBoardingCount, blockedDischargesCount } = useHospital();
+  const { theme, toggleTheme } = useTheme();
   const [moreOpen, setMoreOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const moreButtonRef = useRef<HTMLButtonElement>(null);
@@ -64,12 +72,27 @@ export const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, onOpenA
     <header className="sticky top-0 z-30 bg-page/85 backdrop-blur-md">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 lg:py-0 lg:h-16 flex flex-wrap lg:flex-nowrap items-center gap-x-4 gap-y-2">
         {/* Logo + product name */}
-        <button onClick={() => go('command-center')} className="flex items-center gap-2 shrink-0 cursor-pointer">
-          <span className="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center text-xs font-bold tracking-tight">
-            SF
-          </span>
-          <span className="hidden sm:block text-sm font-semibold tracking-tight text-ink">SmartFlow</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={onReturnToLanding || (() => go('command-center'))}
+            title={onReturnToLanding ? 'Return to SYNESIS Landing Page' : 'Command Center'}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <span className="w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center text-xs font-bold tracking-tight">
+              SF
+            </span>
+            <span className="hidden sm:block text-sm font-semibold tracking-tight text-ink">SmartFlow</span>
+          </button>
+          {onReturnToLanding && (
+            <button
+              onClick={onReturnToLanding}
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-violet-700 bg-violet-100 hover:bg-violet-200 transition-colors cursor-pointer"
+              title="Return to SYNESIS Landing Page"
+            >
+              ← Landing
+            </button>
+          )}
+        </div>
 
         {/* Centered pill nav — scrolls horizontally on small screens */}
         <nav className="order-last lg:order-none w-full lg:w-auto lg:flex-1 min-w-0 flex justify-start lg:justify-center" aria-label="Primary">
@@ -136,6 +159,18 @@ export const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, onOpenA
           <IconButton label="Reset demo data" size="sm" onClick={resetDemoData} className="max-md:hidden">
             <RotateCcw className="w-4 h-4" />
           </IconButton>
+          <IconButton
+            label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            size="sm"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-300" />
+            ) : (
+              <Moon className="w-4 h-4 text-violet-700" />
+            )}
+          </IconButton>
 
           {/* User chip with role toggle */}
           <button
@@ -193,6 +228,39 @@ export const TopBar: React.FC<TopBarProps> = ({ activeTab, setActiveTab, onOpenA
                 </button>
               );
             })}
+
+            <div className="my-1 border-t border-line" />
+            <button
+              role="menuitem"
+              onClick={() => {
+                setMoreOpen(false);
+                toggleTheme();
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-left cursor-pointer text-ink hover:bg-canvas font-medium"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 shrink-0 text-amber-300" />
+              ) : (
+                <Moon className="w-4 h-4 shrink-0 text-violet-700" />
+              )}
+              <span className="flex-1">{theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}</span>
+            </button>
+
+            {onReturnToLanding && (
+              <>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    onReturnToLanding();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-left cursor-pointer text-violet-700 hover:bg-violet-50 font-medium"
+                >
+                  <Sparkles className="w-4 h-4 shrink-0 text-violet-600" />
+                  <span className="flex-1">SYNESIS Landing Page</span>
+                </button>
+              </>
+            )}
         </div>
       )}
     </header>
